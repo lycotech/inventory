@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 
 type SettingsMap = Record<string, any>;
 
@@ -19,16 +20,25 @@ export default function SettingsPage() {
         const res = await fetch("/api/settings", { cache: "no-store" });
         const data = res.ok ? await res.json() : {};
         if (!mounted) return;
-        setSettings({
+        const merged = {
           appName: "Femi Inventory",
+          appLogoDataUrl: "",
           defaultTimezone: "UTC",
+          themeMode: "system",
           defaultPageSize: 20,
           defaultReportFormat: "csv",
           expiryAlertDaysDefault: 30,
           alertsPollSeconds: 30,
           preventNegativeIssue: true,
           ...data,
-        });
+        } as SettingsMap;
+        setSettings(merged);
+        // Apply saved theme
+        const mode = (merged.themeMode as string) || "system";
+        const root = document.documentElement;
+        const mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+        const wantDark = mode === 'dark' || (mode === 'system' && mq?.matches);
+        if (wantDark) root.classList.add('dark'); else root.classList.remove('dark');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -39,6 +49,29 @@ export default function SettingsPage() {
   }, []);
 
   const write = (k: string, v: any) => setSettings((s) => ({ ...s, [k]: v }));
+    const applyTheme = (mode: string) => {
+      const root = document.documentElement;
+      const mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+      const wantDark = mode === 'dark' || (mode === 'system' && mq?.matches);
+      if (wantDark) root.classList.add('dark'); else root.classList.remove('dark');
+    };
+  const onPickLogo = async (file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file.");
+      return;
+    }
+    if (file.size > 300 * 1024) {
+      const cont = confirm("This image is larger than 300KB. Continue?");
+      if (!cont) return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      write("appLogoDataUrl", result);
+    };
+    reader.readAsDataURL(file);
+  };
   const onSave = async () => {
     setSaving(true);
     setSaved(null);
@@ -72,6 +105,60 @@ export default function SettingsPage() {
               <span>App name</span>
               <Input value={settings.appName || ""} onChange={(e) => write("appName", e.target.value)} />
             </label>
+              <div className="grid gap-1 text-sm">
+                <span>Theme</span>
+                <div className="inline-flex rounded-md border overflow-hidden">
+                  {([
+                    { k: 'light', label: 'Light' },
+                    { k: 'system', label: 'System' },
+                    { k: 'dark', label: 'Dark' },
+                  ] as const).map((opt, idx) => {
+                    const active = (settings.themeMode || 'system') === opt.k;
+                    return (
+                      <button
+                        key={opt.k}
+                        type="button"
+                        className={`px-3 py-1.5 text-xs ${active ? 'bg-primary text-primary-foreground' : 'bg-card hover:bg-accent'} ${idx>0 ? 'border-l' : ''}`}
+                        onClick={() => { write('themeMode', opt.k); applyTheme(opt.k); }}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <span className="text-xs text-muted-foreground">Choose light, dark, or follow system</span>
+              </div>
+            <div className="grid gap-2 text-sm">
+              <span>App logo</span>
+              <div className="flex items-center gap-3">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => onPickLogo(e.target.files?.[0] || null)}
+                  className="block text-xs"
+                />
+                {settings.appLogoDataUrl && (
+                  <button
+                    type="button"
+                    className="text-xs rounded-md border px-2 py-1 hover:bg-accent"
+                    onClick={() => write("appLogoDataUrl", "")}
+                  >
+                    Remove logo
+                  </button>
+                )}
+              </div>
+              {settings.appLogoDataUrl ? (
+                <div className="mt-1 flex items-center gap-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    alt="App logo preview"
+                    src={settings.appLogoDataUrl}
+                    className="h-10 w-auto border rounded bg-white p-1"
+                  />
+                  <span className="text-xs text-muted-foreground">Preview</span>
+                </div>
+              ) : null}
+            </div>
             <label className="grid gap-1 text-sm">
               <span>Default timezone</span>
               <select
@@ -117,10 +204,10 @@ export default function SettingsPage() {
               <span>Active alerts auto-refresh (seconds)</span>
               <Input type="number" value={settings.alertsPollSeconds || 30} onChange={(e) => write("alertsPollSeconds", Number(e.target.value) || 0)} />
             </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={!!settings.preventNegativeIssue} onChange={(e) => write("preventNegativeIssue", e.target.checked)} />
+            <div className="flex items-center justify-between text-sm">
               <span>Prevent negative stock issue</span>
-            </label>
+              <Switch checked={!!settings.preventNegativeIssue} onCheckedChange={(v) => write("preventNegativeIssue", v)} />
+            </div>
           </section>
         </div>
       )}

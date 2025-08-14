@@ -1,7 +1,7 @@
 import { getSession } from "@/lib/auth";
-import { LogoutButton } from "@/components/logout-button";
 import { headers } from "next/headers";
 import { DashboardNotifications } from "@/components/dashboard/notifications";
+import { Boxes, AlertTriangle, Clock, RefreshCw } from "lucide-react";
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -27,16 +27,15 @@ export default async function DashboardPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Welcome, {session.user.username}</h1>
-        <LogoutButton />
       </div>
   {stats && <DashboardNotifications initial={{ lowStock: stats.lowStock, expiringSoon: stats.expiringSoon }} />}
       <p className="text-muted-foreground">Monitor your inventory levels, alerts, and recent activities.</p>
       {stats && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
-          <StatCard label="Items" value={stats.items} />
-          <StatCard label="Low stock" value={stats.lowStock} />
-          <StatCard label="Expiring soon" value={stats.expiringSoon} />
-          <StatCard label="Tx today" value={stats.transactionsToday} />
+          <StatCard label="Items" value={stats.items} icon={Boxes} tone="sky" />
+          <StatCard label="Low stock" value={stats.lowStock} icon={AlertTriangle} tone="red" />
+          <StatCard label="Expiring soon" value={stats.expiringSoon} icon={Clock} tone="amber" />
+          <StatCard label="Tx today" value={stats.transactionsToday} icon={RefreshCw} tone="emerald" />
         </div>
       )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -69,11 +68,52 @@ export default async function DashboardPage() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+type Tone = "sky" | "red" | "amber" | "emerald" | "violet";
+function StatCard({ label, value, icon: Icon, tone = "sky" }: { label: string; value: number; icon?: React.ComponentType<any>; tone?: Tone }) {
+  const styles: Record<Tone, { bg: string; ring: string; text: string; dot: string }> = {
+    sky: {
+      bg: "bg-gradient-to-br from-sky-50 to-white dark:from-sky-900/20 dark:to-transparent",
+      ring: "ring-sky-200/60 dark:ring-sky-800/50",
+      text: "text-sky-700 dark:text-sky-300",
+      dot: "bg-sky-100 text-sky-700 dark:bg-sky-800/60 dark:text-sky-200",
+    },
+    red: {
+      bg: "bg-gradient-to-br from-rose-50 to-white dark:from-rose-900/20 dark:to-transparent",
+      ring: "ring-rose-200/60 dark:ring-rose-800/50",
+      text: "text-rose-700 dark:text-rose-300",
+      dot: "bg-rose-100 text-rose-700 dark:bg-rose-800/60 dark:text-rose-200",
+    },
+    amber: {
+      bg: "bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/20 dark:to-transparent",
+      ring: "ring-amber-200/60 dark:ring-amber-800/50",
+      text: "text-amber-700 dark:text-amber-300",
+      dot: "bg-amber-100 text-amber-700 dark:bg-amber-800/60 dark:text-amber-200",
+    },
+    emerald: {
+      bg: "bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/20 dark:to-transparent",
+      ring: "ring-emerald-200/60 dark:ring-emerald-800/50",
+      text: "text-emerald-700 dark:text-emerald-300",
+      dot: "bg-emerald-100 text-emerald-700 dark:bg-emerald-800/60 dark:text-emerald-200",
+    },
+    violet: {
+      bg: "bg-gradient-to-br from-violet-50 to-white dark:from-violet-900/20 dark:to-transparent",
+      ring: "ring-violet-200/60 dark:ring-violet-800/50",
+      text: "text-violet-700 dark:text-violet-300",
+      dot: "bg-violet-100 text-violet-700 dark:bg-violet-800/60 dark:text-violet-200",
+    },
+  };
+  const s = styles[tone];
   return (
-    <div className="rounded-lg border bg-card p-4">
-      <div className="text-sm text-muted-foreground">{label}</div>
-      <div className="mt-1 text-2xl font-semibold">{value}</div>
+    <div className={`rounded-lg border ${s.bg} p-4 ring-1 ${s.ring}`}>
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">{label}</div>
+        {Icon ? (
+          <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full ${s.dot}`}>
+            <Icon className="h-4 w-4" />
+          </span>
+        ) : null}
+      </div>
+      <div className={`mt-2 text-2xl font-semibold ${s.text}`}>{value}</div>
     </div>
   );
 }

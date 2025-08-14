@@ -12,5 +12,5 @@ export default async function DashboardLayout({
   const session = await getSession();
   if (!session) return null;
 
-  return <DashboardChrome>{children}</DashboardChrome>;
+  return <DashboardChrome user={session.user}>{children}</DashboardChrome>;
 }
