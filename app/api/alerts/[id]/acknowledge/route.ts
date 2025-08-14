@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -18,4 +21,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   return NextResponse.json({ ok: true });
 }
 
-export const runtime = "nodejs";
+export async function GET() {
+  return NextResponse.json({ ok: true, note: "Use POST to acknowledge an alert." });
+}
+
+export async function HEAD() {
+  return new Response(null, { status: 200 });
+}
