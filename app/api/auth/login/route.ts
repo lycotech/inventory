@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { authenticate, createSession } from "@/lib/auth";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   const { username, password } = await req.json().catch(() => ({ username: "", password: "" }));
   if (!username || !password) {
@@ -11,4 +14,11 @@ export async function POST(req: Request) {
   await createSession(user.id);
   return NextResponse.json({ id: user.id, username: user.username, role: user.role });
 }
-export const runtime = "nodejs";
+
+export async function GET() {
+  return NextResponse.json({ ok: true, note: "POST username/password to login." });
+}
+
+export async function HEAD() {
+  return new Response(null, { status: 200 });
+}
