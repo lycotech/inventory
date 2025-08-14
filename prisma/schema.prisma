@@ -1,0 +1,207 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  manager
+  user
+}
+
+enum TransactionType {
+  receive
+  issue
+  adjustment
+}
+
+enum ImportType {
+  full
+  stock_receive
+  stock_issue
+  adjustment
+}
+
+enum ImportStatus {
+  pending
+  completed
+  failed
+}
+
+enum AlertType {
+  low_stock
+  expiring
+  negative_stock
+}
+
+enum PriorityLevel {
+  low
+  medium
+  high
+}
+
+enum ReportType {
+  inventory
+  transaction
+  alert
+  custom
+}
+
+enum ExecutionStatus {
+  success
+  failed
+  processing
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  username     String    @unique
+  email        String    @unique
+  passwordHash String
+  role         Role      @default(user)
+  lastLogin    DateTime?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  createdInventory Inventory[]    @relation("InventoryCreatedBy")
+  processedTx      StockTransaction[] @relation("TxProcessedBy")
+  processedImports ImportHistory[] @relation("ImportProcessedBy")
+  acknowledgedAlerts AlertLog[]   @relation("AlertAcknowledgedBy")
+  sessions        UserSession[]
+  reports         Report[]        @relation("ReportCreatedBy")
+  reportRuns      ReportExecution[] @relation("ReportExecutedBy")
+}
+
+model Inventory {
+  id               Int       @id @default(autoincrement())
+  barcode          String    @db.VarChar(64)
+  category         String
+  itemName         String
+  searchCode       String
+  warehouseName    String    @db.VarChar(100)
+  stockQty         Int       @default(0)
+  stockAlertLevel  Int       @default(0)
+  expireDate       DateTime?
+  expireDateAlert  Int       @default(0)
+  createdBy        Int
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  creator          User      @relation("InventoryCreatedBy", fields: [createdBy], references: [id])
+  transactions     StockTransaction[]
+  alertLogs        AlertLog[]
+
+  @@unique([barcode, warehouseName], name: "barcode_warehouse")
+}
+
+model StockTransaction {
+  id              Int             @id @default(autoincrement())
+  inventoryId     Int
+  transactionType TransactionType
+  quantity        Int
+  transactionDate DateTime
+  referenceDoc    String?
+  reason          String?
+  processedBy     Int
+  createdAt       DateTime        @default(now())
+
+  // Relations
+  inventory       Inventory       @relation(fields: [inventoryId], references: [id])
+  processor       User            @relation("TxProcessedBy", fields: [processedBy], references: [id])
+}
+
+model ImportHistory {
+  id                Int           @id @default(autoincrement())
+  importType        ImportType
+  filename          String
+  totalRecords      Int           @default(0)
+  successfulRecords Int           @default(0)
+  failedRecords     Int           @default(0)
+  importStatus      ImportStatus  @default(pending)
+  processedBy       Int
+  createdAt         DateTime      @default(now())
+
+  // Relations
+  processor         User          @relation("ImportProcessedBy", fields: [processedBy], references: [id])
+}
+
+model AlertLog {
+  id              Int           @id @default(autoincrement())
+  alertType       AlertType
+  inventoryId     Int
+  message         String
+  priorityLevel   PriorityLevel  @default(medium)
+  acknowledged    Boolean        @default(false)
+  acknowledgedBy  Int?
+  acknowledgedAt  DateTime?
+  createdAt       DateTime       @default(now())
+
+  // Relations
+  inventory       Inventory      @relation(fields: [inventoryId], references: [id])
+  acknowledgedUser User?         @relation("AlertAcknowledgedBy", fields: [acknowledgedBy], references: [id])
+}
+
+model UserSession {
+  id            Int       @id @default(autoincrement())
+  userId        Int
+  sessionToken  String    @unique
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+
+  // Relations
+  user          User      @relation(fields: [userId], references: [id])
+}
+
+model Report {
+  id               Int         @id @default(autoincrement())
+  reportName       String
+  reportType       ReportType
+  reportConfig     Json
+  createdBy        Int
+  isScheduled      Boolean     @default(false)
+  scheduleFrequency String?    // e.g., daily, weekly, cron expr
+  lastGenerated    DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  // Relations
+  creator          User        @relation("ReportCreatedBy", fields: [createdBy], references: [id])
+  executions       ReportExecution[]
+}
+
+model ReportExecution {
+  id             Int             @id @default(autoincrement())
+  reportId       Int?
+  executionTime  DateTime        @default(now())
+  parameters     Json?
+  filePath       String?
+  status         ExecutionStatus @default(processing)
+  errorMessage   String?
+  executedBy     Int
+  createdAt      DateTime        @default(now())
+
+  // Relations
+  report         Report?         @relation(fields: [reportId], references: [id])
+  executor       User            @relation("ReportExecutedBy", fields: [executedBy], references: [id])
+}
+
+// Application key-value settings
+model AppSetting {
+  key       String   @id
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

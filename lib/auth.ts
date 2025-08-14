@@ -1,0 +1,53 @@
+import 'server-only';
+import { cookies } from "next/headers";
+import { prisma } from "./prisma";
+import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
+
+const SESSION_COOKIE = "session_token";
+const SESSION_TTL_DAYS = 7;
+
+export async function createSession(userId: number) {
+  const token = randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
+  await prisma.userSession.create({ data: { sessionToken: token, userId, expiresAt } });
+  const jar = await cookies();
+  jar.set(SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    expires: expiresAt,
+    path: "/",
+  });
+  return token;
+}
+
+export async function getSession() {
+  const jar = await cookies();
+  const token = jar.get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  const session = await prisma.userSession.findUnique({ where: { sessionToken: token } });
+  if (!session || session.expiresAt < new Date()) return null;
+  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, username: true, role: true, isActive: true } });
+  if (!user || !user.isActive) return null;
+  return { token, user };
+}
+
+export async function destroySession() {
+  const jar = await cookies();
+  const token = jar.get(SESSION_COOKIE)?.value;
+  if (token) {
+    await prisma.userSession.delete({ where: { sessionToken: token } }).catch(() => {});
+  }
+  jar.delete(SESSION_COOKIE);
+}
+
+export async function authenticate(username: string, password: string) {
+  const user = await prisma.user.findUnique({ where: { username } });
+  if (!user || !user.passwordHash) return null;
+  const ok = await bcrypt.compare(password, user.passwordHash);
+  if (!ok || !user.isActive) return null;
+  // Update lastLogin asynchronously
+  prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } }).catch(() => {});
+  return user;
+}
