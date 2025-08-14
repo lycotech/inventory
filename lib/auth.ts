@@ -11,35 +11,48 @@ export async function createSession(userId: number) {
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
   await prisma.userSession.create({ data: { sessionToken: token, userId, expiresAt } });
-  const jar = await cookies();
-  jar.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    expires: expiresAt,
-    path: "/",
-  });
+  try {
+    const jar = await cookies();
+    jar.set(SESSION_COOKIE, token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      expires: expiresAt,
+      path: "/",
+    });
+  } catch {
+    // No request context (e.g., build-time probe); ignore cookie set
+  }
   return token;
 }
 
 export async function getSession() {
+  try {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
-  if (!token) return null;
-  const session = await prisma.userSession.findUnique({ where: { sessionToken: token } });
-  if (!session || session.expiresAt < new Date()) return null;
-  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, username: true, role: true, isActive: true } });
-  if (!user || !user.isActive) return null;
-  return { token, user };
+    if (!token) return null;
+    const session = await prisma.userSession.findUnique({ where: { sessionToken: token } });
+    if (!session || session.expiresAt < new Date()) return null;
+    const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, username: true, role: true, isActive: true } });
+    if (!user || !user.isActive) return null;
+    return { token, user };
+  } catch {
+    // No request context; treat as unauthenticated
+    return null;
+  }
 }
 
 export async function destroySession() {
+  try {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
-  if (token) {
-    await prisma.userSession.delete({ where: { sessionToken: token } }).catch(() => {});
+    if (token) {
+      await prisma.userSession.delete({ where: { sessionToken: token } }).catch(() => {});
+    }
+    jar.delete(SESSION_COOKIE);
+  } catch {
+    // No request context; nothing to delete
   }
-  jar.delete(SESSION_COOKIE);
 }
 
 export async function authenticate(username: string, password: string) {
