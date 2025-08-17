@@ -15,16 +15,19 @@ export async function GET(req: Request) {
   const sort = String(url.searchParams.get("sort") || "updatedAt");
   const order = (String(url.searchParams.get("order") || "desc").toLowerCase() === "asc" ? "asc" : "desc") as "asc" | "desc";
 
-  const where = q
-    ? {
-        OR: [
-          { itemName: { contains: q } },
-          { barcode: { contains: q } },
-          { category: { contains: q } },
-          { warehouseName: { contains: q } },
-        ],
-      }
-    : {};
+  const warehouse = String(url.searchParams.get("warehouse") || "").trim();
+  const category = String(url.searchParams.get("category") || "").trim();
+  const where: any = {};
+  if (q) {
+    where.OR = [
+      { itemName: { contains: q } },
+      { barcode: { contains: q } },
+      { category: { contains: q } },
+      { warehouseName: { contains: q } },
+    ];
+  }
+  if (warehouse) where.warehouseName = warehouse;
+  if (category) where.category = category;
 
   // Allow sorting by a safe whitelist
   const sortField = ["updatedAt", "itemName", "barcode", "warehouseName", "stockQty"].includes(sort)

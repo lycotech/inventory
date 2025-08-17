@@ -20,6 +20,10 @@ type AlertRow = {
     itemName: string;
     barcode: string;
     warehouse: string;
+  stockQty?: number | null;
+  stockAlertLevel?: number | null;
+  expireDate?: string | null;
+  expireDateAlert?: number | null;
   };
 };
 
@@ -39,6 +43,18 @@ export default function AlertsPage() {
       <ActiveAlertsSections />
       <AlertsList />
     </div>
+  );
+}
+
+// Helper: bold numeric quantities and threshold numbers in the message
+function boldQtyInMessage(msg: string) {
+  // Simple approach: wrap standalone numbers and patterns like `qty 12`, `<= 5`, `in 3 days`
+  // We’ll only bold numbers; keep text intact.
+  const parts = msg.split(/(\d+\.?\d*)/g);
+  return (
+    <span>
+      {parts.map((p, i) => (i % 2 === 1 ? <strong key={i}>{p}</strong> : <span key={i}>{p}</span>))}
+    </span>
   );
 }
 
@@ -188,7 +204,7 @@ function ActiveAlertsSections() {
         const res = await fetch(`/api/alerts/active`, { cache: "no-store" });
         const json = await res.json();
         const rows = (json.rows || []) as any[];
-        const mk = (r: any): AlertRow => ({
+    const mk = (r: any): AlertRow => ({
           id: r.inventory.id,
           type: r.type,
           priority: r.priority,
@@ -201,7 +217,11 @@ function ActiveAlertsSections() {
             id: r.inventory.id,
             itemName: r.inventory.itemName,
             barcode: r.inventory.barcode,
-            warehouse: r.inventory.warehouse,
+      warehouse: r.inventory.warehouse,
+      stockQty: r.inventory.stockQty,
+      stockAlertLevel: r.inventory.stockAlertLevel,
+      expireDate: r.inventory.expireDate,
+      expireDateAlert: r.inventory.expireDateAlert,
           },
         });
         setLow(rows.filter((x) => x.type === "low_stock").map(mk));
@@ -235,7 +255,9 @@ function ActiveAlertsSections() {
                 </div>
                 <div className="font-medium truncate mt-1">{r.inventory.itemName} <span className="text-xs text-muted-foreground">({r.inventory.barcode})</span></div>
                 <div className="text-xs text-muted-foreground truncate">{r.inventory.warehouse}</div>
-                <div className="text-sm mt-1">{r.message}</div>
+                <div className="text-sm mt-1">
+                  {boldQtyInMessage(r.message)}
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Link href={`/dashboard/inventory?q=${encodeURIComponent(r.inventory.barcode)}`} className="text-xs rounded-md border px-2 py-1 hover:bg-accent">
@@ -259,7 +281,16 @@ function ActiveAlertsSections() {
 }
 
 function AlertRowItem({ row, selected, onToggle, onAck }: { row: AlertRow; selected: boolean; onToggle: () => void; onAck: () => Promise<void> }) {
-  const color = useMemo(() => row.priority === "high" ? "bg-red-100 text-red-700" : row.priority === "medium" ? "bg-amber-100 text-amber-700" : "bg-sky-100 text-sky-700", [row.priority]);
+  const effectivePriority = useMemo(() => {
+    // Elevate to high for display if low stock and qty <= alert threshold
+    if (row.type === 'low_stock') {
+      const qty = typeof row.inventory.stockQty === 'number' ? row.inventory.stockQty : undefined;
+      const th = typeof row.inventory.stockAlertLevel === 'number' ? row.inventory.stockAlertLevel : undefined;
+      if (typeof qty === 'number' && typeof th === 'number' && qty <= th) return 'high';
+    }
+    return row.priority;
+  }, [row.type, row.inventory.stockQty, row.inventory.stockAlertLevel, row.priority]);
+  const color = useMemo(() => effectivePriority === "high" ? "bg-red-100 text-red-700" : effectivePriority === "medium" ? "bg-amber-100 text-amber-700" : "bg-sky-100 text-sky-700", [effectivePriority]);
   return (
     <div className="rounded-lg border px-4 py-3">
       <div className="flex items-start justify-between gap-3">
@@ -267,13 +298,13 @@ function AlertRowItem({ row, selected, onToggle, onAck }: { row: AlertRow; selec
           <input type="checkbox" className="mt-1" checked={selected} onChange={onToggle} />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className={`text-xs rounded-full px-2 py-1 ${color}`}>{row.priority.toUpperCase()}</span>
+              <span className={`text-xs rounded-full px-2 py-1 ${color}`}>{effectivePriority.toUpperCase()}</span>
               <span className="text-xs rounded-full px-2 py-1 bg-secondary/50">{row.type}</span>
               {!row.acknowledged && <span className="text-xs rounded-full px-2 py-1 bg-blue-100 text-blue-700">ACTIVE</span>}
             </div>
             <div className="font-medium truncate mt-1">{row.inventory.itemName} <span className="text-xs text-muted-foreground">({row.inventory.barcode})</span></div>
             <div className="text-xs text-muted-foreground truncate">{row.inventory.warehouse} • {new Date(row.createdAt).toLocaleString()}</div>
-            <div className="text-sm mt-1">{row.message}</div>
+            <div className="text-sm mt-1">{boldQtyInMessage(row.message)}</div>
             {row.acknowledged && (
               <div className="text-xs text-muted-foreground mt-1">Ack by {row.acknowledgedBy} • {row.acknowledgedAt ? new Date(row.acknowledgedAt).toLocaleString() : ''}</div>
             )}

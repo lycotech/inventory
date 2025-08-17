@@ -18,10 +18,11 @@ export default function SettingsPage() {
     (async () => {
       try {
         const res = await fetch("/api/settings", { cache: "no-store" });
-        const data = res.ok ? await res.json() : {};
+          const data = res.ok ? await res.json() : {};
         if (!mounted) return;
         const merged = {
-          appName: "Femi Inventory",
+          appName: "InvAlert – Inventory Alert",
+          appShortName: "InvAlert",
           appLogoDataUrl: "",
           defaultTimezone: "UTC",
           themeMode: "system",
@@ -30,6 +31,12 @@ export default function SettingsPage() {
           expiryAlertDaysDefault: 30,
           alertsPollSeconds: 30,
           preventNegativeIssue: true,
+            alertSoundEnabled: true,
+            alertSoundVolume: 0.6,
+          alertSpeechEnabled: true,
+          alertSpeechRate: 1.0,
+          alertSpeechVoice: "female",
+          alertEmailRecipients: [],
           ...data,
         } as SettingsMap;
         setSettings(merged);
@@ -87,6 +94,23 @@ export default function SettingsPage() {
       setTimeout(() => setSaved(null), 2000);
     }
   };
+
+  // Populate available system voices for selection
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    const load = () => {
+      const vs = window.speechSynthesis.getVoices?.() || [];
+      setVoices(vs);
+    };
+    load();
+    window.speechSynthesis.onvoiceschanged = load;
+    return () => {
+      if (window.speechSynthesis.onvoiceschanged === load) {
+        window.speechSynthesis.onvoiceschanged = null as any;
+      }
+    };
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -177,6 +201,11 @@ export default function SettingsPage() {
           <section className="rounded-lg border p-4 space-y-3">
             <h2 className="text-lg font-medium">Defaults</h2>
             <label className="grid gap-1 text-sm">
+              <span>App short name</span>
+              <Input value={settings.appShortName || ""} onChange={(e) => write("appShortName", e.target.value)} />
+              <span className="text-xs text-muted-foreground">Shown in nav bars and compact UI areas.</span>
+            </label>
+            <label className="grid gap-1 text-sm">
               <span>Default page size</span>
               <Input type="number" value={settings.defaultPageSize || 20} onChange={(e) => write("defaultPageSize", Number(e.target.value) || 0)} />
             </label>
@@ -208,6 +237,75 @@ export default function SettingsPage() {
               <span>Prevent negative stock issue</span>
               <Switch checked={!!settings.preventNegativeIssue} onCheckedChange={(v) => write("preventNegativeIssue", v)} />
             </div>
+            <div className="flex items-center justify-between text-sm">
+              <span>Play sound on new active alerts</span>
+              <Switch checked={!!settings.alertSoundEnabled} onCheckedChange={(v) => write("alertSoundEnabled", v)} />
+            </div>
+            <label className="grid gap-1 text-sm">
+              <span>Alert sound volume ({Math.round(((settings.alertSoundVolume ?? 0.6) as number) * 100)}%)</span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={settings.alertSoundVolume ?? 0.6}
+                onChange={(e) => write("alertSoundVolume", Number(e.target.value))}
+              />
+            </label>
+            <div className="flex items-center justify-between text-sm">
+              <span>Speak alerts (text-to-speech)</span>
+              <Switch checked={!!settings.alertSpeechEnabled} onCheckedChange={(v) => write("alertSpeechEnabled", v)} />
+            </div>
+            <label className="grid gap-1 text-sm">
+              <span>Speech voice</span>
+              <select
+                className="border rounded-md px-2 py-1 text-sm"
+                value={settings.alertSpeechVoice || "female"}
+                onChange={(e) => write("alertSpeechVoice", e.target.value)}
+              >
+                <option value="auto">System default</option>
+                <option value="female">Prefer female</option>
+                <option value="male">Prefer male</option>
+                {voices.length > 0 && <option disabled>──────────</option>}
+                {voices.map((v) => (
+                  <option key={v.name + v.lang} value={v.name}>
+                    {v.name} {v.lang ? `(${v.lang})` : ""}
+                  </option>
+                ))}
+              </select>
+              <span className="text-xs text-muted-foreground">Choose a specific voice or a preference. Availability depends on the device.</span>
+            </label>
+            <label className="grid gap-1 text-sm">
+              <span>Speech rate ({(settings.alertSpeechRate ?? 1.0).toFixed(1)}x)</span>
+              <input
+                type="range"
+                min={0.5}
+                max={1.5}
+                step={0.1}
+                value={settings.alertSpeechRate ?? 1.0}
+                onChange={(e) => write("alertSpeechRate", Number(e.target.value))}
+              />
+            </label>
+            <label className="grid gap-1 text-sm">
+              <span>Stock alert notification emails</span>
+              <textarea
+                className="border rounded-md px-2 py-1 text-sm min-h-20"
+                placeholder="Enter one or many emails, separated by comma or newline"
+                value={(Array.isArray(settings.alertEmailRecipients) ? settings.alertEmailRecipients : []).join(", ")}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const tokens = raw.split(/[\n,;\s]+/g).map((x) => x.trim().toLowerCase()).filter(Boolean);
+                  // simple email filter
+                  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                  const uniq: string[] = [];
+                  for (const t of tokens) {
+                    if (emailRe.test(t) && !uniq.includes(t)) uniq.push(t);
+                  }
+                  write("alertEmailRecipients", uniq);
+                }}
+              />
+              <span className="text-xs text-muted-foreground">These addresses will receive stock alerts (feature can be wired to email later). Separate multiple emails with commas or new lines.</span>
+            </label>
           </section>
         </div>
       )}

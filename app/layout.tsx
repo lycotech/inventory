@@ -13,8 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Inventory Platform",
-  description: "Inventory Notification Platform",
+  title: "InvAlert – Inventory Alert",
+  description: "InvAlert – Inventory Alert Platform",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

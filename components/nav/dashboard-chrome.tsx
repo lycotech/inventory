@@ -12,7 +12,7 @@ type User = { id: number; username: string; role: string; isActive: boolean; pro
 
 export function DashboardChrome({ children, user }: { children: React.ReactNode; user: User }) {
   const [open, setOpen] = useState(false);
-  const [appName, setAppName] = useState<string>("Inventory");
+  const [appName, setAppName] = useState<string>("InvAlert");
   const [logoUrl, setLogoUrl] = useState<string>("");
   const [logoErr, setLogoErr] = useState(false);
   const [themeMode, setThemeMode] = useState<"light" | "dark" | "system">("system");
@@ -44,7 +44,8 @@ export function DashboardChrome({ children, user }: { children: React.ReactNode;
         const r = await fetch("/api/settings", { cache: "no-store" });
         if (r.ok) {
           const s = await r.json();
-          if (s?.appName) setAppName(String(s.appName));
+          const shorty = s?.appShortName || s?.appName;
+          if (shorty) setAppName(String(shorty));
           if (s?.appLogoDataUrl) setLogoUrl(String(s.appLogoDataUrl));
           else if (s?.appLogoUrl) setLogoUrl(String(s.appLogoUrl));
           if (s?.themeMode && ["light","dark","system"].includes(String(s.themeMode))) {

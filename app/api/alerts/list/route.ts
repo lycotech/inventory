@@ -63,6 +63,10 @@ export async function GET(req: Request) {
       itemName: a.inventory.itemName,
       barcode: a.inventory.barcode,
       warehouse: a.inventory.warehouseName,
+      stockQty: (a as any).inventory.stockQty ?? null,
+      stockAlertLevel: (a as any).inventory.stockAlertLevel ?? null,
+      expireDate: (a as any).inventory.expireDate ?? null,
+      expireDateAlert: (a as any).inventory.expireDateAlert ?? null,
     },
   }));
 

@@ -51,7 +51,8 @@ export async function GET() {
 
   const lowStock: ActiveAlert[] = lowRows.map((r: any) => ({
     type: "low_stock",
-    priority: Number(r.stockQty) <= 0 ? "high" : "medium",
+    // High priority whenever current qty is at or below the configured alert level
+    priority: Number(r.stockQty) <= Number(r.stockAlertLevel) ? "high" : "medium",
     message: `Low stock: ${r.itemName} (${r.barcode}) at ${r.warehouseName} — ${Number(r.stockQty)} <= alert ${Number(r.stockAlertLevel)}`,
     createdAt: null,
     inventory: {

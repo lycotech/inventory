@@ -23,6 +23,47 @@ export default function Home() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Login failed");
       }
+      // After login, speak alert details if enabled
+      try {
+        const [sRes, stRes] = await Promise.all([
+          fetch("/api/settings", { cache: "no-store" }).catch(() => null),
+          fetch("/api/dashboard/stats", { cache: "no-store" }).catch(() => null),
+        ]);
+        const settings = sRes && sRes.ok ? await sRes.json() : {};
+        const stats = stRes && stRes.ok ? await stRes.json() : null;
+        const speechEnabled = settings?.alertSpeechEnabled ?? true;
+        const speechRate = Number.isFinite(Number(settings?.alertSpeechRate)) ? Number(settings.alertSpeechRate) : 1.0;
+        const speechVoice = settings?.alertSpeechVoice || 'female';
+        if (speechEnabled && stats && typeof window !== "undefined" && "speechSynthesis" in window) {
+          const low = Number(stats.lowStock) || 0;
+          const exp = Number(stats.expiringSoon) || 0;
+          const parts: string[] = [];
+          parts.push(`${low} item${low === 1 ? "" : "s"} below stock alert`);
+          parts.push(`${exp} item${exp === 1 ? "" : "s"} expiring soon`);
+          const utter = new SpeechSynthesisUtterance(parts.join(", "));
+          utter.rate = Math.min(2, Math.max(0.5, speechRate));
+          try {
+            const prefer = speechVoice;
+            const voices = window.speechSynthesis.getVoices?.() || [];
+            let chosen: SpeechSynthesisVoice | undefined;
+            if (prefer && prefer !== 'auto' && prefer !== 'female' && prefer !== 'male') {
+              chosen = voices.find(v => v.name === prefer);
+            }
+            if (!chosen && (prefer === 'female' || prefer === 'male')) {
+              const wantFemale = prefer === 'female';
+              const byName = voices.find(v => new RegExp(wantFemale ? /(female|woman|samantha|victoria|zira)/i : /(male|man|daniel|david|mark|george|fred)/i).test(v.name));
+              const byLang = voices.find(v => (wantFemale ? /female/i : /male/i).test((v as any).gender || ''));
+              chosen = byName || byLang || voices.find(v => v.lang?.toLowerCase().startsWith('en')) || voices[0];
+              if (wantFemale && utter.pitch !== undefined) utter.pitch = 1.1;
+            }
+            if (chosen) utter.voice = chosen;
+          } catch {}
+          try {
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utter);
+          } catch {}
+        }
+      } catch {}
       router.replace("/dashboard");
     } catch (e: any) {
       setError(e.message || "Login failed");
@@ -85,7 +126,7 @@ export default function Home() {
           <Button className="w-full" onClick={onLogin} disabled={loading || !username || !password}>
             {loading ? "Signing in…" : "Sign in"}
           </Button>
-          <p className="text-xs text-muted-foreground text-center">Use admin / admin123</p>
+          {/* Removed demo credentials hint */}
         </div>
       </main>
     </div>

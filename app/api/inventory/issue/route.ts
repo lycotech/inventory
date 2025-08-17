@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notifyStockAlert } from "@/lib/mailer";
 
 export const runtime = "nodejs";
 
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
   if (inv.stockQty - absQty < 0) {
     // Create a negative stock alert log regardless
     try {
-      await prisma.alertLog.create({
+      const created = await prisma.alertLog.create({
         data: {
           alertType: "negative_stock",
           priorityLevel: "high",
@@ -41,6 +42,20 @@ export async function POST(req: Request) {
           acknowledged: false,
         },
       });
+      // Email notify
+      try {
+        const setting = await prisma.appSetting.findUnique({ where: { key: "alertEmailRecipients" } });
+        const recipients = Array.isArray(setting?.value) ? (setting!.value as any[]).filter((x) => typeof x === 'string') as string[] : [];
+        if (recipients.length) {
+          await notifyStockAlert(recipients, {
+            type: "negative_stock",
+            priority: "high",
+            message: created.message,
+            inventory: { itemName: inv.itemName, barcode: inv.barcode, warehouseName: inv.warehouseName },
+            createdAt: created.createdAt,
+          });
+        }
+      } catch {}
     } catch {}
     if (preventNegative) {
       return NextResponse.json({ error: "Issuing this quantity would result in negative stock. Reduce the quantity." }, { status: 400 });
@@ -60,10 +75,37 @@ export async function POST(req: Request) {
         processedBy: session.user.id,
       },
     });
-    await db.inventory.update({
+    const updated = await db.inventory.update({
       where: { id: inv.id },
       data: { stockQty: { decrement: absQty } },
     });
+    // Low stock alert if we crossed threshold after issuing
+    try {
+      if (updated.stockAlertLevel > 0 && updated.stockQty <= updated.stockAlertLevel) {
+        const createdLow = await db.alertLog.create({
+          data: {
+            alertType: "low_stock",
+            priorityLevel: updated.stockQty <= 0 ? "high" : "medium",
+            message: `Low stock: ${updated.itemName} (${updated.barcode}) at ${updated.warehouseName} — ${updated.stockQty} <= alert ${updated.stockAlertLevel}`,
+            inventoryId: updated.id,
+            acknowledged: false,
+          },
+        });
+        try {
+          const setting = await prisma.appSetting.findUnique({ where: { key: "alertEmailRecipients" } });
+          const recipients = Array.isArray(setting?.value) ? (setting!.value as any[]).filter((x) => typeof x === 'string') as string[] : [];
+          if (recipients.length) {
+            await notifyStockAlert(recipients, {
+              type: "low_stock",
+              priority: createdLow.priorityLevel,
+              message: createdLow.message,
+              inventory: { itemName: updated.itemName, barcode: updated.barcode, warehouseName: updated.warehouseName },
+              createdAt: createdLow.createdAt,
+            });
+          }
+        } catch {}
+      }
+    } catch {}
     return t;
   });
 

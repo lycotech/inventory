@@ -50,6 +50,13 @@ enum PriorityLevel {
   high
 }
 
+enum AgingStatus {
+  active
+  issue
+  expired
+  adjusted
+}
+
 enum ReportType {
   inventory
   transaction
@@ -103,6 +110,7 @@ model Inventory {
   creator          User      @relation("InventoryCreatedBy", fields: [createdBy], references: [id])
   transactions     StockTransaction[]
   alertLogs        AlertLog[]
+  stockAging       StockAging[]
 
   @@unique([barcode, warehouseName], name: "barcode_warehouse")
 }
@@ -121,6 +129,42 @@ model StockTransaction {
   // Relations
   inventory       Inventory       @relation(fields: [inventoryId], references: [id])
   processor       User            @relation("TxProcessedBy", fields: [processedBy], references: [id])
+}
+
+
+model AgingCategory {
+  id             Int     @id @default(autoincrement())
+  categoryName   String
+  minDays        Int
+  maxDays        Int?
+  colorCode      String   @default("#28a745")
+  priorityLevel  Int      @default(0)
+  isActive       Boolean  @default(true)
+
+  // Relations
+  stockAging     StockAging[]
+}
+
+model StockAging {
+  id                 Int          @id @default(autoincrement())
+  inventoryId        Int
+  batchNumber        String?      @db.VarChar(100)
+  receiveDate        DateTime
+  quantityReceived   Int
+  quantityRemaining  Int
+  agingDays          Int          @default(0)
+  agingCategoryId    Int?
+  status             AgingStatus  @default(active)
+  lastMovementDate   DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  // Relations
+  inventory          Inventory    @relation(fields: [inventoryId], references: [id])
+  agingCategory      AgingCategory? @relation(fields: [agingCategoryId], references: [id])
+
+  @@index([inventoryId])
+  @@index([agingCategoryId])
 }
 
 model ImportHistory {
