@@ -67,7 +67,7 @@ export function Sidebar() {
   }, []);
 
   return (
-    <aside className="h-screen sticky top-0 border-r bg-card w-60 hidden md:flex md:flex-col">
+    <aside className="h-screen sticky top-0 border-r bg-card w-64 hidden md:flex md:flex-col">
       <div className="px-4 py-4">
         {logoUrl && !logoErr ? (
           // eslint-disable-next-line @next/next/no-img-element

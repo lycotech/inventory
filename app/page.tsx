@@ -10,6 +10,9 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string>("");
+  const [logoErr, setLogoErr] = useState(false);
+  const [appName, setAppName] = useState<string>("InvAlert");
   const onLogin = async () => {
     setError(null);
     setLoading(true);
@@ -89,10 +92,43 @@ export default function Home() {
     if (dark) root.classList.add("dark");
     else root.classList.remove("dark");
   }, [dark]);
+  // Load branding (logo and app name) for login screen
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/api/settings", { cache: "no-store" });
+        if (r.ok) {
+          const s = await r.json();
+          const shorty = s?.appShortName || s?.appName;
+          if (shorty) setAppName(String(shorty));
+          if (s?.appLogoDataUrl) setLogoUrl(String(s.appLogoDataUrl));
+          else if (s?.appLogoUrl) setLogoUrl(String(s.appLogoUrl));
+        }
+      } catch {}
+    })();
+  }, []);
   return (
     <div className="min-h-screen grid place-items-center p-4">
-      <main className="w-full max-w-sm rounded-xl border bg-card text-card-foreground shadow">
-        <div className="p-5 space-y-4">
+      <main className="w-full max-w-md rounded-xl border bg-card text-card-foreground shadow">
+        <div className="p-6 space-y-4">
+          <div className="flex items-center justify-center">
+            {logoUrl && !logoErr ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt={appName}
+                className="h-16 md:h-20 w-auto"
+                onError={() => setLogoErr(true)}
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src="/icon.svg"
+                alt={appName}
+                className="h-14 md:h-16 w-auto"
+              />
+            )}
+          </div>
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold">Sign in</h1>
             <Button size="sm" variant="ghost" onClick={() => setDark((d) => !d)}>

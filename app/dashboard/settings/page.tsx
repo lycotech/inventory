@@ -177,7 +177,7 @@ export default function SettingsPage() {
                   <img
                     alt="App logo preview"
                     src={settings.appLogoDataUrl}
-                    className="h-10 w-auto border rounded bg-white p-1"
+                    className="h-[100px] w-auto border rounded bg-white p-1"
                   />
                   <span className="text-xs text-muted-foreground">Preview</span>
                 </div>
