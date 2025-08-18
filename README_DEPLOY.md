@@ -72,3 +72,16 @@ Configure recipients in the app under Settings → "Stock alert notification ema
 
 - Database backups: use `mysqldump` or your DB tooling.
 - App config backup: use the built-in Backup page to export JSON, or copy the database and `.env`.
+
+## Troubleshooting 401/Unauthorized after login
+
+If users get 401 on an intranet (HTTP) deployment, it's usually the session cookie being dropped:
+
+- Cookie "Secure" flag on HTTP: By default, production sets cookies as `Secure` (HTTPS only). On HTTP-only intranet, set `COOKIE_SECURE=false` in the environment for the app service.
+- Different domain/port: Ensure you are accessing the app via the same host/port the browser will send cookies to. Reverse proxies should preserve `Host` and `X-Forwarded-*` headers.
+- Time skew: If server time is far off, cookies may be considered expired. Sync time (NTP) on the server.
+- Proxy stripping cookies: Make sure your proxy config isn't removing `Set-Cookie` headers.
+
+Windows Service/IIS reverse proxy notes:
+- If fronted by IIS or ARR, enable sticky cookies and avoid rewriting `Set-Cookie`.
+- If you later enable HTTPS, remove `COOKIE_SECURE=false` so cookies use Secure again.

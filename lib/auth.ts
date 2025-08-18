@@ -6,6 +6,13 @@ import { randomBytes } from "crypto";
 
 const SESSION_COOKIE = "session_token";
 const SESSION_TTL_DAYS = 7;
+// Control whether to mark the cookie as Secure. If not explicitly set, default to NODE_ENV===production.
+// On HTTP-only intranet deployments, set COOKIE_SECURE=false to allow the cookie over HTTP.
+const COOKIE_SECURE = (() => {
+  const v = process.env.COOKIE_SECURE;
+  if (v === undefined) return process.env.NODE_ENV === "production";
+  return !(v === "false" || v === "0");
+})();
 
 export async function createSession(userId: number) {
   const token = randomBytes(32).toString("hex");
@@ -16,7 +23,7 @@ export async function createSession(userId: number) {
     jar.set(SESSION_COOKIE, token, {
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+  secure: COOKIE_SECURE,
       expires: expiresAt,
       path: "/",
     });
