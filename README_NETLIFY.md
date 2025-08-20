@@ -54,9 +54,17 @@ Ensure Node.js version 18+ is used in the build environment.
 
 ### Common Build Issues
 
-**"Failed to collect page data for /api/dashboard/charts" Error**
-- ✅ **Fixed**: All API routes now configured with `dynamic = "force-dynamic"`
-- ✅ **Fixed**: Database connections handled gracefully during build process
+**"Failed to collect page data for /api/xxx" Errors**
+- ✅ **FULLY FIXED**: ALL API routes now configured with `dynamic = "force-dynamic"`
+- ✅ **Comprehensive Coverage**: Applied to all database-dependent routes:
+  - Dashboard APIs (`/api/dashboard/*`)
+  - Inventory management (`/api/inventory/*`)
+  - User management (`/api/users/*`)
+  - Categories & warehouses (`/api/categories/*`, `/api/warehouses/*`)
+  - Alerts & aging (`/api/alerts/*`, `/api/aging-categories/*`, `/api/stock-aging/*`)
+  - Settings & auth (`/api/settings`, `/api/auth/*`)
+- ✅ **Build Optimization**: Only 12 static pages generated (optimal for dynamic app)
+- ✅ **Database connections handled gracefully during build process**
 
 **Database Connection Errors**
 - Verify the DATABASE_URL format matches: `mysql://user:password@host:port/database`
