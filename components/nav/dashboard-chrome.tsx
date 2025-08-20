@@ -67,79 +67,96 @@ export function DashboardChrome({ children, user }: { children: React.ReactNode;
   }
 
   return (
-    <div className="min-h-screen flex bg-background text-foreground">
+    <div className="min-h-screen flex bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/50 dark:from-gray-900 dark:via-blue-950/50 dark:to-indigo-950/30">
+      {/* Background decoration */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 -left-40 w-80 h-80 bg-gradient-to-br from-indigo-400/10 to-cyan-400/10 rounded-full blur-3xl"></div>
+      </div>
+
       {/* Desktop Sidebar */}
-      <div className="hidden md:block">
+      <div className="hidden md:block relative z-10">
         <Sidebar />
       </div>
 
       {/* Mobile Topbar */}
-      <div className="md:hidden fixed inset-x-0 top-0 h-12 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75 z-40">
-        <div className="h-full flex items-center justify-between px-3">
+      <div className="md:hidden fixed inset-x-0 top-0 h-14 border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/75 z-40 shadow-sm">
+        <div className="h-full flex items-center justify-between px-4">
           <button
             aria-label="Open menu"
-            className="rounded-md p-2 hover:bg-accent"
+            className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
             onClick={() => setOpen(true)}
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="text-sm font-semibold">
+          <div className="flex items-center gap-2">
             {logoUrl && !logoErr ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={logoUrl}
                 alt={appName}
-                className="h-6 w-auto"
+                className="h-7 w-auto"
                 onError={() => setLogoErr(true)}
               />
             ) : (
-              appName
+              <span className="text-lg font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{appName}</span>
             )}
           </div>
-          <ProfileDropdown user={user} size={28} />
+          <ProfileDropdown user={user} size={32} />
         </div>
       </div>
 
       {/* Mobile Drawer */}
       <div
         className={cn(
-          "md:hidden fixed inset-0 z-50 transition-opacity",
+          "md:hidden fixed inset-0 z-50 transition-opacity duration-300",
           open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         )}
         aria-hidden={!open}
         onClick={() => setOpen(false)}
       >
-        <div className="absolute inset-0 bg-black/40" />
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
         <div
           className={cn(
-            "absolute top-0 left-0 h-full w-72 max-w-[80%] bg-card border-r shadow-lg transition-transform", 
+            "absolute top-0 left-0 h-full w-80 max-w-[85%] bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-r border-gray-200 dark:border-gray-800 shadow-2xl transition-transform duration-300 ease-out", 
             open ? "translate-x-0" : "-translate-x-full"
           )}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between px-4 h-12 border-b">
-            <div className="text-sm font-semibold">Menu</div>
-            <button aria-label="Close menu" className="rounded-md p-2 hover:bg-accent" onClick={() => setOpen(false)}>
+          <div className="flex items-center justify-between px-6 h-14 border-b border-gray-200 dark:border-gray-800">
+            <div className="text-lg font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Menu</div>
+            <button 
+              aria-label="Close menu" 
+              className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200" 
+              onClick={() => setOpen(false)}
+            >
               <X className="h-5 w-5" />
             </button>
           </div>
-          {/* Reuse Sidebar links by rendering Sidebar but hide its header/footer */}
-          <div className="overflow-y-auto h-[calc(100%-3rem)]">
-            {/* A lightweight mobile list to avoid the full sticky layout in Sidebar */}
+          <div className="overflow-y-auto h-[calc(100%-3.5rem)] py-4">
             <MobileSidebarList onNavigate={() => setOpen(false)} />
           </div>
         </div>
       </div>
 
       {/* Main content */}
-      <main className="flex-1 min-w-0 md:ml-0">
+      <main className="flex-1 min-w-0 md:ml-0 relative z-10">
         {/* Spacer for mobile topbar */}
-        <div className="md:hidden h-12" />
+        <div className="md:hidden h-14" />
+        
         {/* Desktop top bar with profile avatar */}
-        <div className="hidden md:flex items-center justify-end h-12 border-b bg-card/60 backdrop-blur px-6">
-          <ProfileDropdown user={user} size={32} />
+        <div className="hidden md:flex items-center justify-end h-16 border-b border-gray-200/60 dark:border-gray-800/60 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl px-8 shadow-sm">
+          <ProfileDropdown user={user} size={36} />
         </div>
-        <div className="max-w-7xl mx-auto p-6">{children}</div>
+        
+        {/* Content area with enhanced styling */}
+        <div className="relative">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-800/50 min-h-[calc(100vh-12rem)] p-6 sm:p-8">
+              {children}
+            </div>
+          </div>
+        </div>
       </main>
     </div>
   );
@@ -171,7 +188,7 @@ const items = [
 function MobileSidebarList({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <nav className="p-2 space-y-1">
+    <nav className="px-4 space-y-2">
       {items.map((item) => {
         const Icon = item.icon;
         const active = pathname === item.href || (item.href !== "/dashboard" && pathname?.startsWith(item.href));
@@ -181,11 +198,13 @@ function MobileSidebarList({ onNavigate }: { onNavigate?: () => void }) {
             href={item.href}
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-foreground/80 hover:bg-accent hover:text-foreground transition-colors",
-              active && "bg-accent text-foreground"
+              "flex items-center gap-4 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200",
+              active 
+                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25" 
+                : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
             )}
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-5 w-5" />
             <span>{item.label}</span>
           </Link>
         );
@@ -250,28 +269,40 @@ function ProfileDropdown({ user, size = 32 }: { user: User; size?: number }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="rounded-full focus:outline-none focus:ring-2 focus:ring-primary"
+        className="rounded-full focus:outline-none focus:ring-3 focus:ring-blue-500/50 hover:ring-3 hover:ring-blue-500/25 transition-all duration-200 transform hover:scale-105"
       >
         <UserAvatar user={user} size={size} />
       </button>
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-44 rounded-md border bg-popover text-popover-foreground shadow-md z-50"
+          className="absolute right-0 mt-3 w-56 rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-xl z-50 overflow-hidden"
         >
-          <div className="py-1 text-sm">
-            <div className="px-3 py-2">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Theme</div>
-              <div className="inline-flex rounded-md border overflow-hidden">
+          <div className="py-2">
+            {/* User info section */}
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.username}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user.role} • {user.isActive ? 'Active' : 'Inactive'}</div>
+            </div>
+            
+            {/* Theme section */}
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Theme</div>
+              <div className="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-1">
                 {([
                   { k: 'light', label: 'Light' },
-                  { k: 'system', label: 'System' },
+                  { k: 'system', label: 'Auto' },
                   { k: 'dark', label: 'Dark' },
-                ] as const).map((opt, idx) => (
+                ] as const).map((opt) => (
                   <button
                     key={opt.k}
                     type="button"
-                    className={`px-2.5 py-1 text-xs ${mode===opt.k ? 'bg-primary text-primary-foreground' : 'bg-card hover:bg-accent'} ${idx>0 ? 'border-l' : ''}`}
+                    className={cn(
+                      "flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200",
+                      mode === opt.k 
+                        ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm' 
+                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
+                    )}
                     onClick={() => setTheme(opt.k)}
                   >
                     {opt.label}
@@ -279,22 +310,30 @@ function ProfileDropdown({ user, size = 32 }: { user: User; size?: number }) {
                 ))}
               </div>
             </div>
-            <Link
-              href="/dashboard/settings"
-              role="menuitem"
-              className="block w-full px-3 py-2 hover:bg-accent hover:text-foreground"
-              onClick={() => setOpen(false)}
-            >
-              Profile
-            </Link>
-            <button
-              type="button"
-              role="menuitem"
-              className="block w-full text-left px-3 py-2 hover:bg-accent hover:text-foreground"
-              onClick={onLogout}
-            >
-              Sign out
-            </button>
+
+            {/* Navigation links */}
+            <div className="py-1">
+              <Link
+                href="/dashboard/settings"
+                role="menuitem"
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                onClick={() => setOpen(false)}
+              >
+                <Settings className="h-4 w-4" />
+                Profile Settings
+              </Link>
+              <button
+                type="button"
+                role="menuitem"
+                className="flex items-center gap-3 w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200"
+                onClick={onLogout}
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Sign out
+              </button>
+            </div>
           </div>
         </div>
       )}

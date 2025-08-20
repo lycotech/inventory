@@ -67,21 +67,33 @@ export function Sidebar() {
   }, []);
 
   return (
-    <aside className="h-screen sticky top-0 border-r bg-card w-64 hidden md:flex md:flex-col">
-      <div className="px-4 py-4">
-        {logoUrl && !logoErr ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={logoUrl}
-            alt={appName}
-            className="h-8 w-auto"
-            onError={() => setLogoErr(true)}
-          />
-        ) : (
-          <div className="text-base font-semibold">{appName}</div>
-        )}
+    <aside className="h-screen sticky top-0 w-64 hidden md:flex md:flex-col bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-800/50 shadow-xl">
+      {/* Header with logo */}
+      <div className="px-6 py-6 border-b border-gray-200/50 dark:border-gray-800/50">
+        <div className="flex items-center gap-3">
+          {logoUrl && !logoErr ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt={appName}
+              className="h-10 w-auto"
+              onError={() => setLogoErr(true)}
+            />
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Boxes className="h-5 w-5 text-white" />
+              </div>
+              <div className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                {appName}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-      <nav className="flex-1 px-2 pb-4 space-y-1">
+
+      {/* Navigation */}
+      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
         {items.map((item) => {
           const isGroup = (item as any).children?.length;
           const Icon = item.icon as any;
@@ -95,12 +107,20 @@ export function Sidebar() {
                 key={(it as any).href}
                 href={it.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-foreground/80 hover:bg-accent hover:text-foreground transition-colors",
-                  active && "bg-accent text-foreground"
+                  "flex items-center gap-4 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 group",
+                  active 
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25" 
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className={cn(
+                  "h-5 w-5 transition-transform duration-200",
+                  active ? "text-white" : "text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300"
+                )} />
                 <span>{it.label}</span>
+                {active && (
+                  <div className="ml-auto w-2 h-2 bg-white/80 rounded-full animate-pulse" />
+                )}
               </Link>
             );
           }
@@ -109,23 +129,33 @@ export function Sidebar() {
           const [open, setOpen] = useState<boolean>(openDefault);
           const anyActive = group.children.some((c) => pathname?.startsWith(c.href));
           return (
-            <div key={group.label} className="space-y-1">
+            <div key={group.label} className="space-y-2">
               <button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
                 className={cn(
-                  "w-full flex items-center justify-between rounded-md px-3 py-2 text-sm text-foreground/80 hover:bg-accent hover:text-foreground transition-colors",
-                  anyActive && "bg-accent text-foreground"
+                  "w-full flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 group",
+                  anyActive 
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25" 
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
                 )}
               >
-                <span className="flex items-center gap-3">
-                  <Icon className="h-4 w-4" />
+                <span className="flex items-center gap-4">
+                  <Icon className={cn(
+                    "h-5 w-5 transition-transform duration-200",
+                    anyActive ? "text-white" : "text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300"
+                  )} />
                   {group.label}
                 </span>
-                <span className="text-xs">{open ? "▾" : "▸"}</span>
+                <span className={cn(
+                  "text-sm transition-transform duration-200",
+                  open ? "rotate-90" : "rotate-0"
+                )}>
+                  ▸
+                </span>
               </button>
               {open && (
-                <div className="ml-7 space-y-1">
+                <div className="ml-9 space-y-1 animate-in slide-in-from-top-1 duration-200">
                   {group.children.map((c) => {
                     const active = pathname?.startsWith(c.href);
                     return (
@@ -133,11 +163,16 @@ export function Sidebar() {
                         key={c.href}
                         href={c.href}
                         className={cn(
-                          "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-foreground/80 hover:bg-accent hover:text-foreground transition-colors",
-                          active && "bg-accent text-foreground"
+                          "flex items-center gap-3 rounded-lg px-4 py-2 text-sm transition-all duration-200",
+                          active 
+                            ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-l-2 border-blue-500" 
+                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-300"
                         )}
                       >
-                        <span className="text-xs">•</span>
+                        <span className={cn(
+                          "w-1.5 h-1.5 rounded-full transition-all duration-200",
+                          active ? "bg-blue-500" : "bg-gray-400 dark:bg-gray-600"
+                        )} />
                         <span>{c.label}</span>
                       </Link>
                     );
@@ -148,7 +183,13 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="px-4 py-3 text-xs text-muted-foreground">v0.1.0</div>
+
+      {/* Footer */}
+      <div className="px-6 py-4 border-t border-gray-200/50 dark:border-gray-800/50">
+        <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+          Version 1.0.0
+        </div>
+      </div>
     </aside>
   );
 }
