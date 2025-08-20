@@ -4,6 +4,8 @@ import { DashboardNotifications } from "@/components/dashboard/notifications";
 import { DashboardCharts } from "@/components/dashboard/charts";
 import { Boxes, AlertTriangle, Clock, RefreshCw } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const session = await getSession();
   if (!session) {
