@@ -52,9 +52,24 @@ Ensure Node.js version 18+ is used in the build environment.
 
 ## Troubleshooting
 
-- If you get database connection errors, verify the DATABASE_URL format
-- For authentication issues, ensure AUTH_SESSION_SECRET is set
-- For HTTPS/cookie issues, verify COOKIE_SECURE setting matches your deployment protocol
+### Common Build Issues
+
+**"Failed to collect page data for /api/dashboard/charts" Error**
+- ✅ **Fixed**: All API routes now configured with `dynamic = "force-dynamic"`
+- ✅ **Fixed**: Database connections handled gracefully during build process
+
+**Database Connection Errors**
+- Verify the DATABASE_URL format matches: `mysql://user:password@host:port/database`
+- Ensure all special characters in password are URL-encoded (@ becomes %40, etc.)
+
+**Authentication Issues**
+- Ensure AUTH_SESSION_SECRET is set and is at least 32 characters long
+- Verify COOKIE_SECURE setting matches your deployment protocol (true for HTTPS)
+
+**Build Process**
+- All dynamic pages are configured to render on-demand
+- API routes return empty data gracefully when database is unavailable during build
+- No static site generation attempted for database-dependent routes
 
 ## Post-Deployment
 
