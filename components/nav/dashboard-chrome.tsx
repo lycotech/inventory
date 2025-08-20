@@ -145,7 +145,7 @@ export function DashboardChrome({ children, user }: { children: React.ReactNode;
         <div className="md:hidden h-14" />
         
         {/* Desktop top bar with profile avatar */}
-        <div className="hidden md:flex items-center justify-end h-16 border-b border-gray-200/60 dark:border-gray-800/60 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl px-8 shadow-sm">
+        <div className="hidden md:flex items-center justify-end h-16 border-b border-gray-200/60 dark:border-gray-800/60 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl px-8 shadow-sm relative z-50">
           <ProfileDropdown user={user} size={36} />
         </div>
         
@@ -154,6 +154,17 @@ export function DashboardChrome({ children, user }: { children: React.ReactNode;
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-800/50 min-h-[calc(100vh-12rem)] p-6 sm:p-8">
               {children}
+            </div>
+          </div>
+          
+          {/* Footer */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+            <div className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-200/30 dark:border-gray-800/30 p-4">
+              <div className="text-center">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  © 2025 TechValor Ent. • Secure inventory management system
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -263,7 +274,7 @@ function ProfileDropdown({ user, size = 32 }: { user: User; size?: number }) {
   };
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative z-[9999]">
       <button
         type="button"
         aria-haspopup="menu"
@@ -276,7 +287,7 @@ function ProfileDropdown({ user, size = 32 }: { user: User; size?: number }) {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-3 w-56 rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-xl z-50 overflow-hidden"
+          className="absolute right-0 mt-3 w-56 rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-xl z-[9999] overflow-hidden"
         >
           <div className="py-2">
             {/* User info section */}

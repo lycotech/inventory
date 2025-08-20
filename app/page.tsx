@@ -255,6 +255,9 @@ export default function Home() {
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Secure inventory management • {new Date().getFullYear()}
               </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                © 2025 TechValor Ent.
+              </p>
             </div>
           </div>
         </div>
