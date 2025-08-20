@@ -5,6 +5,7 @@ import ExcelJS from "exceljs";
 import { PDFDocument as PDFLibDocument, StandardFonts, rgb, PageSizes } from "pdf-lib";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function toCSV(rows: any[], headers?: string[]): string {
   if (!rows.length) return (headers ? headers.join(",") : "") + "\n";

@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const TEMPLATES: Record<string, string> = {
   full: "barcode,category,itemName,searchCode,warehouseName,stockQty,stockAlertLevel,expireDate,expireDateAlert\n123,Category A,Item name,SC001,Main,10,2,2025-12-31,30\n",
   stock_receive: "barcode,warehouseName,quantity,referenceDoc,reason\n123,Main,5,GRN-001,Initial stock\n",

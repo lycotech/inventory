@@ -3,6 +3,9 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 // Change user password
 export async function PUT(req: NextRequest) {
   try {
