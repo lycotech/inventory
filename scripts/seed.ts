@@ -60,14 +60,16 @@ async function main() {
       for (let j = 0; j < numTransactions; j++) {
         const randomItem = items[Math.floor(Math.random() * items.length)];
         const quantity = Math.floor(Math.random() * 20) + 1;
-        const transactionType = Math.random() > 0.5 ? 'receive' : 'issue';
+        const isReceive = Math.random() > 0.5;
+        const transactionType = isReceive ? 'receive' : 'issue';
         
         transactions.push({
           inventoryId: randomItem.id,
-          quantity: transactionType === 'receive' ? quantity : -quantity,
-          transactionType,
+          quantity: isReceive ? quantity : -quantity,
+          transactionType: transactionType as any,
           transactionDate,
-          remarks: `Sample ${transactionType} transaction`,
+          reason: `Sample ${transactionType} transaction`,
+          processedBy: adminUser.id,
         });
       }
     }

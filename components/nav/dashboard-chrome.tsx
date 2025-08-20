@@ -8,7 +8,17 @@ import { UserAvatar } from "@/components/user-avatar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-type User = { id: number; username: string; role: string; isActive: boolean; profileImageUrl?: string };
+type User = { 
+  id: number; 
+  username: string; 
+  role: string; 
+  isActive: boolean; 
+  profileImageUrl?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  phoneNumber?: string | null;
+  address?: string | null;
+};
 
 export function DashboardChrome({ children, user }: { children: React.ReactNode; user: User }) {
   const [open, setOpen] = useState(false);

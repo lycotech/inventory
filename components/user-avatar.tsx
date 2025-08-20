@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 
-type User = { id: number; username: string; role: string; profileImageUrl?: string };
+type User = { 
+  id: number; 
+  username: string; 
+  role: string; 
+  profileImageUrl?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  phoneNumber?: string | null;
+  address?: string | null;
+};
 
 export function UserAvatar({ user, size = 32 }: { user: User; size?: number }) {
   const [imgErr, setImgErr] = useState(false);
@@ -29,7 +38,7 @@ export function UserAvatar({ user, size = 32 }: { user: User; size?: number }) {
         // eslint-disable-next-line @next/next/no-img-element
         <img
           alt={user?.username || "User"}
-          src={user.profileImageUrl}
+          src={user.profileImageUrl || undefined}
           className="absolute inset-0 h-full w-full object-cover"
           onError={() => setImgErr(true)}
         />
