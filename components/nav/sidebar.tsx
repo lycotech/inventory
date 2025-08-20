@@ -13,6 +13,7 @@ import {
   Users,
   Database,
   Settings,
+  User,
 } from "lucide-react";
 
 type NavItem =
@@ -43,6 +44,7 @@ const items: NavItem[] = [
   { label: "Stock Aging", href: "/dashboard/stock-aging", icon: BarChart3 },
   { label: "Users", href: "/dashboard/users", icon: Users },
   { label: "Backup", href: "/dashboard/backup", icon: Database },
+  { label: "Profile", href: "/dashboard/profile", icon: User },
   { label: "Setting", href: "/dashboard/settings", icon: Settings },
 ];
 

@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/auth";
 import { headers } from "next/headers";
 import { DashboardNotifications } from "@/components/dashboard/notifications";
+import { DashboardCharts } from "@/components/dashboard/charts";
 import { Boxes, AlertTriangle, Clock, RefreshCw } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -47,6 +48,20 @@ export default async function DashboardPage() {
           <StatCard label="Transactions Today" value={stats.transactionsToday} icon={RefreshCw} tone="emerald" />
         </div>
       )}
+
+      {/* Charts Section */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-3">
+              <span className="w-1 h-6 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-full"></span>
+              Analytics Overview
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Visual insights into your inventory data</p>
+          </div>
+        </div>
+        <DashboardCharts />
+      </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

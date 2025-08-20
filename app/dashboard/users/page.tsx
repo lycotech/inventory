@@ -365,7 +365,7 @@ function UserRowItem({ row }: { row: UserRow }) {
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg shadow-indigo-500/25 flex-shrink-0">
             <span className="text-white font-semibold text-sm">
-              {row.username.charAt(0).toUpperCase()}
+              {(row.username || "U").charAt(0).toUpperCase()}
             </span>
           </div>
           <div className="min-w-0 flex-1">
@@ -374,7 +374,7 @@ function UserRowItem({ row }: { row: UserRow }) {
                 {row.username}
               </h3>
               <span className={`px-2 py-1 rounded-lg text-xs font-medium ${getRoleBadge(role)}`}>
-                {role.charAt(0).toUpperCase() + role.slice(1)}
+                {(role || "user").charAt(0).toUpperCase() + (role || "user").slice(1)}
               </span>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{row.email}</p>

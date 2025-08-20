@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/nav/sidebar";
 import { cn } from "@/lib/utils";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User as UserIcon } from "lucide-react";
 import { UserAvatar } from "@/components/user-avatar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -325,13 +325,22 @@ function ProfileDropdown({ user, size = 32 }: { user: User; size?: number }) {
             {/* Navigation links */}
             <div className="py-1">
               <Link
+                href="/dashboard/profile"
+                role="menuitem"
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                onClick={() => setOpen(false)}
+              >
+                <UserIcon className="h-4 w-4" />
+                My Profile
+              </Link>
+              <Link
                 href="/dashboard/settings"
                 role="menuitem"
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
                 onClick={() => setOpen(false)}
               >
                 <Settings className="h-4 w-4" />
-                Profile Settings
+                App Settings
               </Link>
               <button
                 type="button"

@@ -40,7 +40,23 @@ export async function getSession() {
     if (!token) return null;
     const session = await prisma.userSession.findUnique({ where: { sessionToken: token } });
     if (!session || session.expiresAt < new Date()) return null;
-    const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, username: true, role: true, isActive: true } });
+    const user = await prisma.user.findUnique({ 
+      where: { id: session.userId }, 
+      select: { 
+        id: true, 
+        username: true, 
+        email: true,
+        firstName: true,
+        lastName: true,
+        phoneNumber: true,
+        address: true,
+        profileImageUrl: true,
+        role: true, 
+        isActive: true,
+        createdAt: true,
+        lastLogin: true
+      } 
+    });
     if (!user || !user.isActive) return null;
     return { token, user };
   } catch {

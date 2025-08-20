@@ -15,6 +15,70 @@ async function main() {
     console.log("Admin user already exists:", username);
   }
 
+  // Add sample inventory data if none exists
+  const inventoryCount = await prisma.inventory.count();
+  if (inventoryCount === 0) {
+    console.log("Adding sample inventory data...");
+    
+    // Get admin user to use as creator
+    const adminUser = await prisma.user.findUnique({ where: { username } });
+    if (!adminUser) {
+      console.log("Admin user not found, skipping sample data creation");
+      return;
+    }
+    
+    const sampleItems = [
+      { itemName: "Laptop Dell XPS", category: "Electronics", warehouseName: "Main Warehouse", stockQty: 45, stockAlertLevel: 10, barcode: "LAP001", searchCode: "LAPDELXPS", createdBy: adminUser.id },
+      { itemName: "Office Chair", category: "Furniture", warehouseName: "Storage A", stockQty: 23, stockAlertLevel: 5, barcode: "CHR001", searchCode: "OFFCHAIR", createdBy: adminUser.id },
+      { itemName: "Printer Paper A4", category: "Office Supplies", warehouseName: "Main Warehouse", stockQty: 8, stockAlertLevel: 15, barcode: "PPR001", searchCode: "PRNPAPERA4", createdBy: adminUser.id }, // Low stock
+      { itemName: "USB Cable", category: "Electronics", warehouseName: "Storage B", stockQty: 67, stockAlertLevel: 20, barcode: "USB001", searchCode: "USBCBL", createdBy: adminUser.id },
+      { itemName: "Desk Lamp", category: "Furniture", warehouseName: "Storage A", stockQty: 34, stockAlertLevel: 8, barcode: "LMP001", searchCode: "DSKLMP", createdBy: adminUser.id },
+      { itemName: "Notebook", category: "Office Supplies", warehouseName: "Main Warehouse", stockQty: 156, stockAlertLevel: 25, barcode: "NTB001", searchCode: "NOTEBOOK", createdBy: adminUser.id },
+      { itemName: "Monitor 24inch", category: "Electronics", warehouseName: "Storage B", stockQty: 12, stockAlertLevel: 15, barcode: "MON001", searchCode: "MON24", createdBy: adminUser.id },
+      { itemName: "Coffee Beans", category: "Beverages", warehouseName: "Kitchen Storage", stockQty: 4, stockAlertLevel: 10, barcode: "COF001", searchCode: "COFBEANS", createdBy: adminUser.id }, // Low stock
+      { itemName: "Whiteboard Marker", category: "Office Supplies", warehouseName: "Main Warehouse", stockQty: 28, stockAlertLevel: 12, barcode: "MRK001", searchCode: "WHTMRK", createdBy: adminUser.id },
+      { itemName: "Keyboard Wireless", category: "Electronics", warehouseName: "Storage A", stockQty: 19, stockAlertLevel: 8, barcode: "KBD001", searchCode: "KBDWIRELESS", createdBy: adminUser.id },
+    ];
+
+    for (const item of sampleItems) {
+      await prisma.inventory.create({ data: item });
+    }
+
+    console.log(`Added ${sampleItems.length} sample inventory items`);
+
+    // Add some sample transactions
+    const items = await prisma.inventory.findMany();
+    const today = new Date();
+    const transactions = [];
+    
+    for (let i = 0; i < 7; i++) {
+      const transactionDate = new Date(today);
+      transactionDate.setDate(today.getDate() - i);
+      
+      // Create 2-5 transactions per day
+      const numTransactions = Math.floor(Math.random() * 4) + 2;
+      for (let j = 0; j < numTransactions; j++) {
+        const randomItem = items[Math.floor(Math.random() * items.length)];
+        const quantity = Math.floor(Math.random() * 20) + 1;
+        const transactionType = Math.random() > 0.5 ? 'receive' : 'issue';
+        
+        transactions.push({
+          inventoryId: randomItem.id,
+          quantity: transactionType === 'receive' ? quantity : -quantity,
+          transactionType,
+          transactionDate,
+          remarks: `Sample ${transactionType} transaction`,
+        });
+      }
+    }
+
+    for (const transaction of transactions) {
+      await prisma.stockTransaction.create({ data: transaction });
+    }
+
+    console.log(`Added ${transactions.length} sample transactions`);
+  }
+
   // Seed default aging categories
   const defaults = [
     { categoryName: "0-30 Days", minDays: 0,   maxDays: 30,  colorCode: "#28a745", priorityLevel: 1, isActive: true },
