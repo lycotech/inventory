@@ -67,13 +67,15 @@ export default function ImportPage() {
                 <option value="stock_receive">Stock receive</option>
                 <option value="stock_issue">Stock issue</option>
                 <option value="adjustment">Adjustment</option>
+                <option value="warehouse_transfer">Warehouse transfer</option>
               </select>
               <div className="mt-2 text-xs text-muted-foreground">
                 Download a CSV template: {" "}
                 <a className="underline" href={templateUrl("full")}>full</a> • {" "}
                 <a className="underline" href={templateUrl("stock_receive")}>stock_receive</a> • {" "}
                 <a className="underline" href={templateUrl("stock_issue")}>stock_issue</a> • {" "}
-                <a className="underline" href={templateUrl("adjustment")}>adjustment</a>
+                <a className="underline" href={templateUrl("adjustment")}>adjustment</a> • {" "}
+                <a className="underline" href={templateUrl("warehouse_transfer")}>warehouse_transfer</a>
               </div>
             </div>
             <div>

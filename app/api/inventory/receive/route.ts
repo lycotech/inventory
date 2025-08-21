@@ -10,20 +10,42 @@ export async function POST(req: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
-  const { barcode, warehouseName, quantity, referenceDoc, reason } = body as {
+  const { barcode, warehouseName, quantity, referenceDoc, reason, allowNonCentral } = body as {
     barcode?: string;
     warehouseName?: string;
     quantity?: number;
     referenceDoc?: string;
     reason?: string;
+    allowNonCentral?: boolean; // For admin override
   };
   if (!barcode || !warehouseName || !quantity || !Number.isFinite(quantity)) {
     return NextResponse.json({ error: "barcode, warehouseName and quantity required" }, { status: 400 });
   }
-  const inv = await prisma.inventory.findUnique({ where: { barcode_warehouse: { barcode, warehouseName } } });
-  if (!inv) return NextResponse.json({ error: "Inventory not found" }, { status: 404 });
 
-  const tx = await prisma.$transaction(async (db: Parameters<typeof prisma.$transaction>[0] extends (arg: infer A) => any ? A : any) => {
+  try {
+    // Check if target warehouse is central warehouse
+    const targetWarehouse = await prisma.warehouse.findFirst({
+      where: { warehouseName, isActive: true }
+    });
+
+    // Get central warehouse info
+    const centralWarehouse = await prisma.warehouse.findFirst({
+      where: { isCentralWarehouse: true, isActive: true }
+    });
+
+    // Enforce central warehouse policy unless explicitly overridden by admin
+    if (!allowNonCentral && centralWarehouse && !targetWarehouse?.isCentralWarehouse) {
+      return NextResponse.json({ 
+        error: `Stock must be received into central warehouse (${centralWarehouse.warehouseName}) first. Use warehouse transfer to move items to other locations.`,
+        suggestion: `Receive into ${centralWarehouse.warehouseName} then transfer to ${warehouseName}`,
+        centralWarehouse: centralWarehouse.warehouseName
+      }, { status: 400 });
+    }
+
+    const inv = await prisma.inventory.findUnique({ where: { barcode_warehouse: { barcode, warehouseName } } });
+    if (!inv) return NextResponse.json({ error: "Inventory not found" }, { status: 404 });
+
+    const tx = await prisma.$transaction(async (db: Parameters<typeof prisma.$transaction>[0] extends (arg: infer A) => any ? A : any) => {
     const t = await db.stockTransaction.create({
       data: {
         inventoryId: inv.id,
@@ -67,7 +89,13 @@ export async function POST(req: Request) {
       }
     } catch {}
     return t;
-  });
+    });
 
-  return NextResponse.json({ ok: true, id: tx.id });
+    return NextResponse.json({ ok: true, id: tx.id });
+  } catch (error: any) {
+    console.error("Stock receive error:", error);
+    return NextResponse.json({ 
+      error: error.message || "Failed to process stock receive" 
+    }, { status: 500 });
+  }
 }

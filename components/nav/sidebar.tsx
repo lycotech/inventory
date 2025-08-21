@@ -36,6 +36,7 @@ const items: NavItem[] = [
     children: [
       { label: "Stock Item", href: "/dashboard/inventory/stock-items" },
       { label: "Manage Stock", href: "/dashboard/inventory" },
+      { label: "Warehouse Transfer", href: "/dashboard/warehouse-transfer" },
     ],
   },
   { label: "Import Data", href: "/dashboard/import", icon: FileUp },

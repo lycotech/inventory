@@ -23,6 +23,7 @@ enum TransactionType {
   receive
   issue
   adjustment
+  transfer
 }
 
 enum ImportType {
@@ -30,6 +31,7 @@ enum ImportType {
   stock_receive
   stock_issue
   adjustment
+  warehouse_transfer
 }
 
 enum ImportStatus {
@@ -122,20 +124,44 @@ model Inventory {
   @@unique([barcode, warehouseName], name: "barcode_warehouse")
 }
 
+model Warehouse {
+  id              Int      @id @default(autoincrement())
+  warehouseName   String   @unique
+  warehouseCode   String   @unique
+  location        String?
+  contactPerson   String?
+  phoneNumber     String?
+  email           String?
+  isCentralWarehouse Boolean @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations for transfers
+  transfersFrom   StockTransaction[] @relation("TransferFromWarehouse")
+  transfersTo     StockTransaction[] @relation("TransferToWarehouse")
+}
+
 model StockTransaction {
-  id              Int             @id @default(autoincrement())
-  inventoryId     Int
-  transactionType TransactionType
-  quantity        Int
-  transactionDate DateTime
-  referenceDoc    String?
-  reason          String?
-  processedBy     Int
-  createdAt       DateTime        @default(now())
+  id               Int             @id @default(autoincrement())
+  inventoryId      Int
+  transactionType  TransactionType
+  quantity         Int
+  transactionDate  DateTime
+  referenceDoc     String?
+  reason           String?
+  processedBy      Int
+  createdAt        DateTime        @default(now())
+  
+  // For warehouse transfers
+  fromWarehouseId  Int?
+  toWarehouseId    Int?
 
   // Relations
-  inventory       Inventory       @relation(fields: [inventoryId], references: [id])
-  processor       User            @relation("TxProcessedBy", fields: [processedBy], references: [id])
+  inventory        Inventory       @relation(fields: [inventoryId], references: [id])
+  processor        User            @relation("TxProcessedBy", fields: [processedBy], references: [id])
+  fromWarehouse    Warehouse?      @relation("TransferFromWarehouse", fields: [fromWarehouseId], references: [id])
+  toWarehouse      Warehouse?      @relation("TransferToWarehouse", fields: [toWarehouseId], references: [id])
 }
 
 

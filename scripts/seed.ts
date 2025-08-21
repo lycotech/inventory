@@ -2,6 +2,60 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 async function main() {
+  // Create warehouses first
+  console.log("Setting up warehouses...");
+  
+  const warehouses = [
+    {
+      warehouseName: "Central Warehouse",
+      warehouseCode: "CWH001",
+      location: "Main Distribution Center",
+      contactPerson: "John Manager",
+      phoneNumber: "+1234567890",
+      email: "central@company.com",
+      isCentralWarehouse: true,
+    },
+    {
+      warehouseName: "Branch A",
+      warehouseCode: "BWH001", 
+      location: "North Branch",
+      contactPerson: "Alice Branch",
+      phoneNumber: "+1234567891",
+      email: "brancha@company.com",
+      isCentralWarehouse: false,
+    },
+    {
+      warehouseName: "Branch B", 
+      warehouseCode: "BWH002",
+      location: "South Branch",
+      contactPerson: "Bob Branch",
+      phoneNumber: "+1234567892", 
+      email: "branchb@company.com",
+      isCentralWarehouse: false,
+    },
+    {
+      warehouseName: "Storage Depot",
+      warehouseCode: "SWH001",
+      location: "External Storage Facility", 
+      contactPerson: "Carol Storage",
+      phoneNumber: "+1234567893",
+      email: "storage@company.com",
+      isCentralWarehouse: false,
+    },
+  ];
+
+  for (const warehouse of warehouses) {
+    const existing = await prisma.warehouse.findUnique({ 
+      where: { warehouseName: warehouse.warehouseName } 
+    });
+    if (!existing) {
+      await prisma.warehouse.create({ data: warehouse });
+      console.log(`Created warehouse: ${warehouse.warehouseName} (${warehouse.isCentralWarehouse ? 'Central' : 'Branch'})`);
+    } else {
+      console.log(`Warehouse already exists: ${warehouse.warehouseName}`);
+    }
+  }
+
   // Ensure admin user
   const username = process.env.SEED_ADMIN_USERNAME || "admin";
   const password = process.env.SEED_ADMIN_PASSWORD || "admin123";
@@ -28,16 +82,16 @@ async function main() {
     }
     
     const sampleItems = [
-      { itemName: "Laptop Dell XPS", category: "Electronics", warehouseName: "Main Warehouse", stockQty: 45, stockAlertLevel: 10, barcode: "LAP001", searchCode: "LAPDELXPS", createdBy: adminUser.id },
-      { itemName: "Office Chair", category: "Furniture", warehouseName: "Storage A", stockQty: 23, stockAlertLevel: 5, barcode: "CHR001", searchCode: "OFFCHAIR", createdBy: adminUser.id },
-      { itemName: "Printer Paper A4", category: "Office Supplies", warehouseName: "Main Warehouse", stockQty: 8, stockAlertLevel: 15, barcode: "PPR001", searchCode: "PRNPAPERA4", createdBy: adminUser.id }, // Low stock
-      { itemName: "USB Cable", category: "Electronics", warehouseName: "Storage B", stockQty: 67, stockAlertLevel: 20, barcode: "USB001", searchCode: "USBCBL", createdBy: adminUser.id },
-      { itemName: "Desk Lamp", category: "Furniture", warehouseName: "Storage A", stockQty: 34, stockAlertLevel: 8, barcode: "LMP001", searchCode: "DSKLMP", createdBy: adminUser.id },
-      { itemName: "Notebook", category: "Office Supplies", warehouseName: "Main Warehouse", stockQty: 156, stockAlertLevel: 25, barcode: "NTB001", searchCode: "NOTEBOOK", createdBy: adminUser.id },
-      { itemName: "Monitor 24inch", category: "Electronics", warehouseName: "Storage B", stockQty: 12, stockAlertLevel: 15, barcode: "MON001", searchCode: "MON24", createdBy: adminUser.id },
-      { itemName: "Coffee Beans", category: "Beverages", warehouseName: "Kitchen Storage", stockQty: 4, stockAlertLevel: 10, barcode: "COF001", searchCode: "COFBEANS", createdBy: adminUser.id }, // Low stock
-      { itemName: "Whiteboard Marker", category: "Office Supplies", warehouseName: "Main Warehouse", stockQty: 28, stockAlertLevel: 12, barcode: "MRK001", searchCode: "WHTMRK", createdBy: adminUser.id },
-      { itemName: "Keyboard Wireless", category: "Electronics", warehouseName: "Storage A", stockQty: 19, stockAlertLevel: 8, barcode: "KBD001", searchCode: "KBDWIRELESS", createdBy: adminUser.id },
+      { itemName: "Laptop Dell XPS", category: "Electronics", warehouseName: "Central Warehouse", stockQty: 45, stockAlertLevel: 10, barcode: "LAP001", searchCode: "LAPDELXPS", createdBy: adminUser.id },
+      { itemName: "Office Chair", category: "Furniture", warehouseName: "Central Warehouse", stockQty: 23, stockAlertLevel: 5, barcode: "CHR001", searchCode: "OFFCHAIR", createdBy: adminUser.id },
+      { itemName: "Printer Paper A4", category: "Office Supplies", warehouseName: "Central Warehouse", stockQty: 8, stockAlertLevel: 15, barcode: "PPR001", searchCode: "PRNPAPERA4", createdBy: adminUser.id }, // Low stock
+      { itemName: "USB Cable", category: "Electronics", warehouseName: "Branch A", stockQty: 67, stockAlertLevel: 20, barcode: "USB001", searchCode: "USBCBL", createdBy: adminUser.id },
+      { itemName: "Desk Lamp", category: "Furniture", warehouseName: "Branch A", stockQty: 34, stockAlertLevel: 8, barcode: "LMP001", searchCode: "DSKLMP", createdBy: adminUser.id },
+      { itemName: "Notebook", category: "Office Supplies", warehouseName: "Central Warehouse", stockQty: 156, stockAlertLevel: 25, barcode: "NTB001", searchCode: "NOTEBOOK", createdBy: adminUser.id },
+      { itemName: "Monitor 24inch", category: "Electronics", warehouseName: "Branch B", stockQty: 12, stockAlertLevel: 15, barcode: "MON001", searchCode: "MON24", createdBy: adminUser.id },
+      { itemName: "Coffee Beans", category: "Beverages", warehouseName: "Storage Depot", stockQty: 4, stockAlertLevel: 10, barcode: "COF001", searchCode: "COFBEANS", createdBy: adminUser.id }, // Low stock
+      { itemName: "Whiteboard Marker", category: "Office Supplies", warehouseName: "Central Warehouse", stockQty: 28, stockAlertLevel: 12, barcode: "MRK001", searchCode: "WHTMRK", createdBy: adminUser.id },
+      { itemName: "Keyboard Wireless", category: "Electronics", warehouseName: "Branch A", stockQty: 19, stockAlertLevel: 8, barcode: "KBD001", searchCode: "KBDWIRELESS", createdBy: adminUser.id },
     ];
 
     for (const item of sampleItems) {

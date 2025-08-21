@@ -56,6 +56,11 @@ export async function POST(req: Request) {
     if (missing.length) {
       return NextResponse.json({ ok: false, error: `Missing required column(s): ${missing.join(", ")}. Please download the latest template for '${importType}'.` }, { status: 400 });
     }
+  } else if (importType === "warehouse_transfer") {
+    const missing = requireCols(["barcode", "fromWarehouse", "toWarehouse", "quantity"]);
+    if (missing.length) {
+      return NextResponse.json({ ok: false, error: `Missing required column(s): ${missing.join(", ")}. Please download the latest template for 'warehouse_transfer'.` }, { status: 400 });
+    }
   }
 
   const importRec = await prisma.importHistory.create({
@@ -169,6 +174,73 @@ export async function POST(req: Request) {
           where: { id: invId },
           data: { stockQty: { increment: txType === "issue" ? -Math.abs(qty) : Math.abs(qty) } },
         });
+        successful++;
+      } else if (importType === "warehouse_transfer") {
+        const barcode = String(getVal(row, "barcode") || "").trim();
+        const fromWarehouse = String(getVal(row, "fromWarehouse") || "").trim();
+        const toWarehouse = String(getVal(row, "toWarehouse") || "").trim();
+        const qty = toInt(getVal(row, "quantity"));
+        
+        if (!barcode) throw new Error("barcode is required");
+        if (!fromWarehouse) throw new Error("fromWarehouse is required");
+        if (!toWarehouse) throw new Error("toWarehouse is required");
+        if (!qty) throw new Error("quantity is required");
+        if (fromWarehouse === toWarehouse) throw new Error("fromWarehouse and toWarehouse must be different");
+
+        // Check source inventory exists and has sufficient stock
+        const sourceInv = await prisma.inventory.findUnique({ 
+          where: { barcode_warehouse: { barcode, warehouseName: fromWarehouse } } 
+        });
+        if (!sourceInv) throw new Error(`source inventory not found for ${barcode} in warehouse ${fromWarehouse}`);
+        if (sourceInv.stockQty < Math.abs(qty)) throw new Error(`insufficient stock. Available: ${sourceInv.stockQty}, Required: ${Math.abs(qty)}`);
+
+        // Find or create destination inventory
+        let destInv = await prisma.inventory.findUnique({
+          where: { barcode_warehouse: { barcode, warehouseName: toWarehouse } }
+        });
+
+        if (!destInv) {
+          destInv = await prisma.inventory.create({
+            data: {
+              barcode: sourceInv.barcode,
+              category: sourceInv.category,
+              itemName: sourceInv.itemName,
+              searchCode: sourceInv.searchCode,
+              warehouseName: toWarehouse,
+              stockQty: 0,
+              stockAlertLevel: sourceInv.stockAlertLevel,
+              expireDate: sourceInv.expireDate,
+              expireDateAlert: sourceInv.expireDateAlert,
+              createdBy: session.user.id,
+            },
+          });
+        }
+
+        // Create transfer transaction
+        await prisma.stockTransaction.create({
+          data: {
+            inventoryId: sourceInv.id,
+            transactionType: "transfer",
+            quantity: Math.abs(qty),
+            transactionDate: new Date(),
+            referenceDoc: getVal(row, "referenceDoc") ? String(getVal(row, "referenceDoc")) : null,
+            reason: getVal(row, "reason") ? String(getVal(row, "reason")) || `Transfer from ${fromWarehouse} to ${toWarehouse}` : `Transfer from ${fromWarehouse} to ${toWarehouse}`,
+            processedBy: session.user.id,
+          },
+        });
+
+        // Update source warehouse stock (decrease)
+        await prisma.inventory.update({
+          where: { id: sourceInv.id },
+          data: { stockQty: { decrement: Math.abs(qty) } },
+        });
+
+        // Update destination warehouse stock (increase)
+        await prisma.inventory.update({
+          where: { id: destInv.id },
+          data: { stockQty: { increment: Math.abs(qty) } },
+        });
+
         successful++;
       } else {
         throw new Error(`Unknown importType: ${importType}`);
