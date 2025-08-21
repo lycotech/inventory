@@ -4,11 +4,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const TEMPLATES: Record<string, string> = {
-  full: "barcode,category,itemName,searchCode,warehouseName,stockQty,stockAlertLevel,expireDate,expireDateAlert\n123,Category A,Item name,SC001,Main,10,2,2025-12-31,30\n",
-  stock_receive: "barcode,warehouseName,quantity,referenceDoc,reason\n123,Central,5,GRN-001,Initial stock receiving to central warehouse\n",
-  stock_issue: "barcode,warehouseName,quantity,referenceDoc,reason\n123,Branch A,2,ISS-001,Issue from warehouse\n",
-  adjustment: "barcode,warehouseName,quantity,reason\n123,Main,-1,Stock correction\n",
-  warehouse_transfer: "barcode,fromWarehouse,toWarehouse,quantity,referenceDoc,reason\n123,Central,Branch A,5,TRF-001,Transfer to branch warehouse\n",
+  full: "barcode,category,itemName,searchCode,warehouseName,stockQty,stockAlertLevel,expireDate,expireDateAlert\nYOUR_BARCODE,Your Category,Your Item Name,SEARCH_CODE,Your Warehouse,10,5,2025-12-31,30\n",
+  stock_receive: "barcode,warehouseName,quantity,referenceDoc,reason\nYOUR_BARCODE,Your Central Warehouse,10,GRN-001,Stock receiving\n",
+  stock_issue: "barcode,warehouseName,quantity,referenceDoc,reason\nYOUR_BARCODE,Your Warehouse,5,ISS-001,Stock issue\n",
+  adjustment: "barcode,warehouseName,quantity,reason\nYOUR_BARCODE,Your Warehouse,-1,Stock adjustment\n",
+  warehouse_transfer: "barcode,fromWarehouse,toWarehouse,quantity,referenceDoc,reason\nYOUR_BARCODE,Your Central Warehouse,Your Branch Warehouse,5,TRF-001,Stock transfer\n",
 };
 
 export async function GET(_: Request, ctx: { params: Promise<{ type: string }> }) {
