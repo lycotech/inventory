@@ -95,7 +95,7 @@ async function setupRealWarehouses() {
       orderBy: [{ isCentralWarehouse: 'desc' }, { warehouseName: 'asc' }]
     });
     
-    allWarehouses.forEach((w: any) => {
+    allWarehouses.forEach((w: { warehouseName: string; warehouseCode: string; isCentralWarehouse: boolean }) => {
       console.log(`   ${w.isCentralWarehouse ? '🏭' : '🏢'} ${w.warehouseName} (${w.warehouseCode})`);
     });
 

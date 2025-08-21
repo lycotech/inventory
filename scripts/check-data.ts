@@ -24,7 +24,7 @@ async function checkData() {
         select: { id: true, warehouseName: true, warehouseCode: true, isCentralWarehouse: true }
       });
       console.log(`🏭 Warehouses:`);
-      warehouses.forEach((w: any) => {
+      warehouses.forEach((w: { warehouseName: string; warehouseCode: string; isCentralWarehouse: boolean }) => {
         console.log(`   - ${w.warehouseName} (${w.warehouseCode})${w.isCentralWarehouse ? ' [CENTRAL]' : ''}`);
       });
       console.log('');
@@ -41,7 +41,7 @@ async function checkData() {
         }
       });
       console.log(`📦 Sample Inventory Items:`);
-      sampleItems.forEach((item: any) => {
+      sampleItems.forEach((item: { itemName: string; stockQty: number; warehouseName: string }) => {
         console.log(`   - ${item.itemName} (Qty: ${item.stockQty}) @ ${item.warehouseName}`);
       });
     } else {

@@ -67,7 +67,7 @@ export default function StockAgingPage() {
           fetch("/api/categories/list", { cache: "no-store" }).then(r => r.ok ? r.json() : { categories: [] }).catch(() => ({ categories: [] })),
         ]);
         setWarehouses(w.warehouses || []);
-        setCategories(c.categories?.map((x: any) => x.categoryName || x) || []);
+        setCategories(c.categories?.map((x: string | { categoryName: string }) => typeof x === 'string' ? x : x.categoryName || x) || []);
       } catch {}
     })();
   }, []);

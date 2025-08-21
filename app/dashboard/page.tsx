@@ -73,7 +73,7 @@ export default async function DashboardPage() {
           <div className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6">
             <div className="space-y-4">
               {recent?.recent?.length ? (
-                recent.recent.map((r: any) => (
+                recent.recent.map((r: { id: number; itemName: string; warehouse: string; type: string; quantity: number; at: string; referenceDoc?: string }) => (
                   <RecentRow key={r.id} item={r} />
                 ))
               ) : (
