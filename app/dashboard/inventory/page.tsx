@@ -36,7 +36,7 @@ export default function InventoryPage() {
       {/* Action Cards */}
       <div className="grid md:grid-cols-2 gap-8">
         <ReceiveCard />
-        <IssueCard />
+        <TransferCard />
       </div>
 
       {/* History */}
@@ -237,9 +237,10 @@ function ReceiveCard() {
   );
 }
 
-function IssueCard() {
+function TransferCard() {
   const [barcode, setBarcode] = useState("");
-  const [warehouseName, setWarehouseName] = useState("");
+  const [fromWarehouseName, setFromWarehouseName] = useState("");
+  const [toWarehouseName, setToWarehouseName] = useState("");
   const [warehouses, setWarehouses] = useState<string[]>([]);
   const [found, setFound] = useState<{ itemName: string; qty: number } | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
@@ -266,10 +267,10 @@ function IssueCard() {
       setFound(null);
       setNotFound(false);
       setLookupLoading(false);
-      if (!barcode || !warehouseName) return;
+      if (!barcode || !fromWarehouseName) return;
       setLookupLoading(true);
       try {
-        const res = await fetch(`/api/inventory/lookup?barcode=${encodeURIComponent(barcode)}&warehouseName=${encodeURIComponent(warehouseName)}`, { cache: "no-store" });
+        const res = await fetch(`/api/inventory/lookup?barcode=${encodeURIComponent(barcode)}&warehouseName=${encodeURIComponent(fromWarehouseName)}`, { cache: "no-store" });
         const json = await res.json();
         if (json.found) {
           setFound({ itemName: json.item.itemName, qty: json.item.qty });
@@ -285,22 +286,29 @@ function IssueCard() {
         setLookupLoading(false);
       }
     })();
-  }, [barcode, warehouseName]);
+  }, [barcode, fromWarehouseName]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMsg(null);
-  if (!barcode || !warehouseName || !qty) return;
+  if (!barcode || !fromWarehouseName || !toWarehouseName || !qty) return;
     try {
       setLoading(true);
-      const res = await fetch("/api/inventory/issue", {
+      const res = await fetch("/api/inventory/transfer", {
         method: "POST",
         headers: { "content-type": "application/json" },
-    body: JSON.stringify({ barcode, warehouseName, quantity: Number(qty), referenceDoc: ref || undefined, reason: reason || undefined }),
+    body: JSON.stringify({ 
+      barcode, 
+      fromWarehouse: fromWarehouseName, 
+      toWarehouse: toWarehouseName, 
+      quantity: Number(qty), 
+      referenceDoc: ref || undefined, 
+      reason: reason || undefined 
+    }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to issue");
-      setMsg("Issued successfully");
+      if (!res.ok) throw new Error(json.error || "Failed to transfer");
+      setMsg("Transferred successfully");
       setQty("");
       window.dispatchEvent(new CustomEvent("inventory:changed"));
     } catch (e: any) {
@@ -313,12 +321,12 @@ function IssueCard() {
   return (
     <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6 shadow-lg hover:shadow-xl transition-all duration-300">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
-          <span className="text-white font-semibold text-lg">↙</span>
+        <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/25">
+          <span className="text-white font-semibold text-lg">⇄</span>
         </div>
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Issue Stock</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Remove inventory from warehouse</p>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Stock Transfer</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Transfer inventory between warehouses</p>
         </div>
       </div>
       
@@ -329,7 +337,7 @@ function IssueCard() {
             value={barcode} 
             onChange={(e) => setBarcode(e.target.value)} 
             placeholder="Scan or type barcode" 
-            className="h-11 bg-gray-50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500"
+            className="h-11 bg-gray-50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 focus:border-green-500 focus:ring-green-500"
           />
           {lookupLoading && (
             <div className="text-xs text-blue-600 dark:text-blue-400 mt-2 flex items-center gap-2">
@@ -342,7 +350,7 @@ function IssueCard() {
               <strong>{found.itemName}</strong> • Available: {found.qty}
             </div>
           )}
-          {!lookupLoading && !found && notFound && warehouseName && barcode && (
+          {!lookupLoading && !found && notFound && fromWarehouseName && barcode && (
             <div className="text-xs text-red-600 dark:text-red-400 mt-2 bg-red-50 dark:bg-red-900/20 p-2 rounded-lg">
               Item not found in this warehouse
             </div>
@@ -350,22 +358,43 @@ function IssueCard() {
         </div>
         
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Warehouse</label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">From Warehouse</label>
           {warehouses.length ? (
             <select 
-              value={warehouseName} 
-              onChange={(e) => setWarehouseName(e.target.value)} 
-              className="w-full h-11 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 px-3 text-sm focus:border-blue-500 focus:ring-blue-500 dark:text-gray-100"
+              value={fromWarehouseName} 
+              onChange={(e) => setFromWarehouseName(e.target.value)} 
+              className="w-full h-11 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 px-3 text-sm focus:border-green-500 focus:ring-green-500 dark:text-gray-100"
             >
-              <option value="">Select a warehouse</option>
+              <option value="">Select source warehouse</option>
               {warehouses.map((w) => <option key={w} value={w}>{w}</option>)}
             </select>
           ) : (
             <Input 
-              value={warehouseName} 
-              onChange={(e) => setWarehouseName(e.target.value)} 
+              value={fromWarehouseName} 
+              onChange={(e) => setFromWarehouseName(e.target.value)} 
               placeholder="e.g. Main Warehouse" 
-              className="h-11 bg-gray-50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500"
+              className="h-11 bg-gray-50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 focus:border-green-500 focus:ring-green-500"
+            />
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">To Warehouse</label>
+          {warehouses.length ? (
+            <select 
+              value={toWarehouseName} 
+              onChange={(e) => setToWarehouseName(e.target.value)} 
+              className="w-full h-11 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 px-3 text-sm focus:border-green-500 focus:ring-green-500 dark:text-gray-100"
+            >
+              <option value="">Select destination warehouse</option>
+              {warehouses.map((w) => <option key={w} value={w}>{w}</option>)}
+            </select>
+          ) : (
+            <Input 
+              value={toWarehouseName} 
+              onChange={(e) => setToWarehouseName(e.target.value)} 
+              placeholder="e.g. Branch Warehouse" 
+              className="h-11 bg-gray-50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 focus:border-green-500 focus:ring-green-500"
             />
           )}
         </div>
@@ -377,7 +406,7 @@ function IssueCard() {
               type="number" 
               value={qty} 
               onChange={(e) => setQty(e.target.value === "" ? "" : Number(e.target.value))} 
-              className="h-11 bg-gray-50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500"
+              className="h-11 bg-gray-50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 focus:border-green-500 focus:ring-green-500"
               placeholder="0"
             />
           </div>
@@ -386,8 +415,8 @@ function IssueCard() {
             <Input 
               value={ref} 
               onChange={(e) => setRef(e.target.value)} 
-              placeholder="e.g. ISS-001" 
-              className="h-11 bg-gray-50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500"
+              placeholder="e.g. TRF-001" 
+              className="h-11 bg-gray-50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 focus:border-green-500 focus:ring-green-500"
             />
           </div>
         </div>
@@ -397,16 +426,16 @@ function IssueCard() {
           <Input 
             value={reason} 
             onChange={(e) => setReason(e.target.value)} 
-            placeholder="Sales order, transfer, etc." 
-            className="h-11 bg-gray-50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500"
+            placeholder="Warehouse relocation, stock optimization, etc." 
+            className="h-11 bg-gray-50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 focus:border-green-500 focus:ring-green-500"
           />
         </div>
         
         <div className="flex items-center justify-between pt-2">
           <Button 
             type="submit" 
-            disabled={!barcode || !warehouseName || !qty || loading}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed h-11 px-6"
+            disabled={!barcode || !fromWarehouseName || !toWarehouseName || !qty || loading}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg shadow-green-500/25 disabled:opacity-50 disabled:cursor-not-allowed h-11 px-6"
           >
             {loading ? (
               <div className="flex items-center gap-2">
@@ -414,11 +443,11 @@ function IssueCard() {
                 Processing...
               </div>
             ) : (
-              "Issue Stock"
+              "Transfer Stock"
             )}
           </Button>
           {msg && (
-            <span className={`text-sm font-medium ${msg.includes('success') ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
+            <span className={`text-sm font-medium ${msg.includes('success') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
               {msg}
             </span>
           )}
