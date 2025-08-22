@@ -156,7 +156,19 @@ npx prisma generate
 npx prisma migrate reset
 ```
 
-#### 4. Port Already in Use
+#### 4. Turbopack Font Loading Error
+If you encounter `Module not found: Can't resolve '@vercel/turbopack-next/internal/font/google/font'`:
+```powershell
+# This error occurs with Next.js Turbopack and Google Fonts
+# Solution: The project has been updated to use CSS font imports instead
+# If you still see this error, ensure your app/layout.tsx doesn't use:
+# import { Inter } from "next/font/google";
+
+# The fix uses CSS imports in globals.css instead:
+# @import url('https://fonts.googleapis.com/css2?family=Inter...');
+```
+
+#### 5. Port Already in Use
 ```powershell
 # Find process using port 3000
 netstat -ano | findstr :3000
