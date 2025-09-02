@@ -56,6 +56,11 @@ export async function POST(req: Request) {
     if (missing.length) {
       return NextResponse.json({ ok: false, error: `Missing required column(s): ${missing.join(", ")}. Please download the latest template for '${importType}'.` }, { status: 400 });
     }
+  } else if (importType === "stock_alert") {
+    const missing = requireCols(["barcode", "warehouseName", "stockAlertLevel"]);
+    if (missing.length) {
+      return NextResponse.json({ ok: false, error: `Missing required column(s): ${missing.join(", ")}. Please download the latest template for 'stock_alert'.` }, { status: 400 });
+    }
   } else if (importType === "warehouse_transfer") {
     const missing = requireCols(["barcode", "fromWarehouse", "toWarehouse", "quantity"]);
     if (missing.length) {
@@ -173,6 +178,24 @@ export async function POST(req: Request) {
   await prisma.inventory.update({
           where: { id: invId },
           data: { stockQty: { increment: txType === "issue" ? -Math.abs(qty) : Math.abs(qty) } },
+        });
+        successful++;
+      } else if (importType === "stock_alert") {
+        const barcode = String(getVal(row, "barcode") || "").trim();
+        const warehouseName = String(getVal(row, "warehouseName") || "").trim();
+        const stockAlertLevel = toInt(getVal(row, "stockAlertLevel"));
+        
+        if (!barcode) throw new Error("barcode is required");
+        if (!warehouseName) throw new Error("warehouseName is required");
+        if (stockAlertLevel < 0) throw new Error("stockAlertLevel must be >= 0");
+        
+        const invId = await getInventoryId(barcode, warehouseName);
+        if (!invId) throw new Error(`inventory not found for ${barcode} in warehouse ${warehouseName}`);
+
+        // Update the stock alert level
+        await prisma.inventory.update({
+          where: { id: invId },
+          data: { stockAlertLevel: stockAlertLevel },
         });
         successful++;
       } else if (importType === "warehouse_transfer") {

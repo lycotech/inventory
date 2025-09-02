@@ -29,9 +29,9 @@ enum TransactionType {
 enum ImportType {
   full
   stock_receive
-  stock_issue
+  stock_transfer
+  stock_alert
   adjustment
-  warehouse_transfer
 }
 
 enum ImportStatus {
