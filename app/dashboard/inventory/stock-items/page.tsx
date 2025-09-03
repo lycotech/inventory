@@ -251,8 +251,28 @@ function RowView({ row }: { row: Row }) {
   const [alertLevel, setAlertLevel] = useState(row.alert);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const badge = row.qty <= row.alert ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400";
+
+  // Safe formatting functions to avoid hydration issues
+  const formatQuantity = (quantity: number) => {
+    if (!mounted) return "0";
+    return quantity.toLocaleString();
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!mounted) return "Loading...";
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch {
+      return "Invalid date";
+    }
+  };
 
   const saveAlert = async () => {
     if (alertLevel === row.alert) {
@@ -318,7 +338,7 @@ function RowView({ row }: { row: Row }) {
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  Expires {new Date(row.expireDate).toLocaleDateString()}
+                  Expires {formatDate(row.expireDate)}
                 </span>
               </>
             )}
@@ -328,7 +348,7 @@ function RowView({ row }: { row: Row }) {
         <div className="flex items-center gap-3 ml-4 flex-shrink-0">
           <div className="text-center">
             <div className="text-lg font-bold text-gray-900 dark:text-gray-100 tabular-nums">
-              {row.qty.toLocaleString()}
+              {formatQuantity(row.qty)}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">Stock</div>
           </div>
@@ -367,7 +387,7 @@ function RowView({ row }: { row: Row }) {
                   onClick={() => setIsEditing(true)}
                   className="text-sm font-semibold tabular-nums text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 cursor-pointer"
                 >
-                  {row.alert}
+                  {formatQuantity(row.alert)}
                 </button>
                 <div className="text-xs text-gray-500 dark:text-gray-400">Alert Level</div>
               </div>

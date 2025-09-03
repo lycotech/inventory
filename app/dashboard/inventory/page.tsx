@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 
 type TxRow = {
   id: number;
@@ -19,6 +19,12 @@ type TxRow = {
 };
 
 export default function InventoryPage() {
+  const router = useRouter();
+
+  const handleManageStockItems = () => {
+    router.push('/dashboard/inventory/stock-items');
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -33,7 +39,7 @@ export default function InventoryPage() {
         </div>
         <div className="flex items-center gap-3">
           <Button 
-            onClick={() => window.location.href = '/dashboard/inventory/stock-items'}
+            onClick={handleManageStockItems}
             className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/25 h-11 px-6"
           >
             <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -558,6 +564,12 @@ function HistoryCard() {
 }
 
 function HistoryRow({ row }: { row: TxRow }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const typeConfig = useMemo(() => {
     const configs = {
       receive: { 
@@ -588,6 +600,22 @@ function HistoryRow({ row }: { row: TxRow }) {
     return configs[row.type as keyof typeof configs] || configs.adjustment;
   }, [row.type]);
 
+  // Format date safely to avoid hydration issues
+  const formatDate = (dateString: string) => {
+    if (!mounted) return "Loading...";
+    try {
+      return new Date(dateString).toLocaleDateString() + ' ' + new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return "Invalid date";
+    }
+  };
+
+  // Format number safely to avoid hydration issues
+  const formatQuantity = (quantity: number) => {
+    if (!mounted) return "0";
+    return Math.abs(quantity).toLocaleString();
+  };
+
   return (
     <div className={`rounded-xl border ${typeConfig.border} ${typeConfig.cardBg} p-4 transition-all duration-200 hover:shadow-md`}>
       <div className="flex items-center justify-between gap-4">
@@ -603,7 +631,7 @@ function HistoryRow({ row }: { row: TxRow }) {
             <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2 flex-wrap">
               <span>{row.warehouse}</span>
               <span>•</span>
-              <span>{new Date(row.at).toLocaleString()}</span>
+              <span>{formatDate(row.at)}</span>
               <span>•</span>
               <span>by {row.by}</span>
             </div>
@@ -617,7 +645,7 @@ function HistoryRow({ row }: { row: TxRow }) {
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           <span className="text-lg font-bold text-gray-900 dark:text-gray-100 tabular-nums">
-            {row.type === 'issue' ? '-' : '+'}{Math.abs(row.quantity).toLocaleString()}
+            {row.type === 'issue' ? '-' : '+'}{formatQuantity(row.quantity)}
           </span>
           <span className={`text-xs rounded-full px-3 py-1.5 font-medium ${typeConfig.bg} ${typeConfig.text} shadow-sm`}>
             {typeConfig.label}
