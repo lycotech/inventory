@@ -8,25 +8,38 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60; // allow some time for larger files
 
 export async function POST(req: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-
-  const form = await req.formData();
-  const file = form.get("file");
-  const importType = String(form.get("importType") || "full");
-  if (!(file instanceof Blob)) {
-    return NextResponse.json({ ok: false, error: "Missing file" }, { status: 400 });
-  }
-
-  const buf = Buffer.from(await file.arrayBuffer());
-  let sheet: any[] = [];
   try {
-    const wb = XLSX.read(buf, { type: "buffer", cellDates: true });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    sheet = XLSX.utils.sheet_to_json(ws, { defval: "" });
-  } catch (e) {
-    return NextResponse.json({ ok: false, error: "Failed to parse XLSX" }, { status: 400 });
-  }
+    console.log("Starting import process...");
+    
+    const session = await getSession();
+    if (!session) {
+      console.log("No session found");
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
+    
+    console.log("Session found, user ID:", session.user.id);
+
+    const form = await req.formData();
+    const file = form.get("file");
+    const importType = String(form.get("importType") || "full");
+    
+    console.log("Import type:", importType, "File:", file ? "present" : "missing");
+    
+    if (!(file instanceof Blob)) {
+      console.log("No file provided");
+      return NextResponse.json({ ok: false, error: "Missing file" }, { status: 400 });
+    }
+
+    const buf = Buffer.from(await file.arrayBuffer());
+    let sheet: any[] = [];
+    try {
+      const wb = XLSX.read(buf, { type: "buffer", cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      sheet = XLSX.utils.sheet_to_json(ws, { defval: "" });
+    } catch (e) {
+      console.error("XLSX parsing error:", e);
+      return NextResponse.json({ ok: false, error: "Failed to parse XLSX file. Please ensure it's a valid Excel file." }, { status: 400 });
+    }
 
   // Basic validation on headers before recording history
   if (!Array.isArray(sheet) || sheet.length === 0) {
@@ -76,6 +89,9 @@ export async function POST(req: Request) {
       importStatus: "pending",
       processedBy: session.user.id,
     },
+  }).catch((dbError) => {
+    console.error("Database error creating import history:", dbError);
+    throw new Error(`Failed to create import record: ${dbError.message}`);
   });
 
   const errors: { row: number; message: string }[] = [];
@@ -288,4 +304,12 @@ export async function POST(req: Request) {
     summary: { total: sheet.length, successful, failed: errors.length },
     errors,
   });
+  
+  } catch (error: any) {
+    console.error("Import API error:", error);
+    return NextResponse.json({ 
+      ok: false, 
+      error: `Server error: ${error?.message || 'Unknown error occurred during import'}` 
+    }, { status: 500 });
+  }
 }
