@@ -190,7 +190,7 @@ export async function POST(req: Request) {
         if (stockAlertLevel < 0) throw new Error("stockAlertLevel must be >= 0");
         
         const invId = await getInventoryId(barcode, warehouseName);
-        if (!invId) throw new Error(`inventory not found for ${barcode} in warehouse ${warehouseName}`);
+        if (!invId) throw new Error(`inventory not found for barcode "${barcode}" in warehouse "${warehouseName}". Please ensure the item exists before updating alert levels.`);
 
         // Update the stock alert level
         await prisma.inventory.update({

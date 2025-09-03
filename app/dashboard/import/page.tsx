@@ -31,6 +31,20 @@ export default function ImportPage() {
       fd.append("file", file);
       fd.append("importType", type);
       const res = await fetch("/api/import", { method: "POST", body: fd });
+      
+      // Check if response is ok and has content
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Server error (${res.status}): ${errorText || 'Unknown error'}`);
+      }
+      
+      // Check if response has JSON content
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const responseText = await res.text();
+        throw new Error(`Invalid response format. Expected JSON but got: ${responseText.substring(0, 200)}...`);
+      }
+      
       const json = await res.json();
       setResult(json);
       if (res.ok) {
@@ -38,6 +52,7 @@ export default function ImportPage() {
         window.dispatchEvent(new CustomEvent("stock:changed"));
       }
     } catch (e) {
+      console.error('Import error:', e);
       setResult({ ok: false, errors: [{ row: 0, message: (e as Error).message }] });
     } finally {
       setLoading(false);

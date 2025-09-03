@@ -1,0 +1,3 @@
+barcode,category,itemName,searchCode,warehouseName,stockQty,stockAlertLevel,expireDate,expireDateAlert
+TEST123,Electronics,Test Item 1,TI1,Central Warehouse,100,10,2025-12-31,30
+TEST456,Office Supplies,Test Item 2,TI2,Central Warehouse,50,5,2026-01-15,30
