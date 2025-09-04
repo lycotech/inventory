@@ -11,7 +11,8 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const warehouses = await prisma.warehouse.findMany({
+    // Get warehouses from the dedicated warehouse table
+    const warehouseRecords = await prisma.warehouse.findMany({
       where: { isActive: true },
       orderBy: [
         { isCentralWarehouse: 'desc' }, // Central warehouse first
@@ -19,7 +20,54 @@ export async function GET() {
       ],
     });
 
-    return NextResponse.json({ warehouses });
+    // Get warehouse names from inventory records (these might not have dedicated warehouse records)
+    const inventoryWarehouses = await prisma.inventory.findMany({
+      distinct: ["warehouseName"],
+      select: { warehouseName: true },
+      orderBy: { warehouseName: "asc" },
+      take: 200,
+    });
+
+    // Create a map of existing warehouse records
+    const warehouseMap = new Map();
+    warehouseRecords.forEach(wh => {
+      warehouseMap.set(wh.warehouseName, wh);
+    });
+
+    // Add inventory warehouses that don't have dedicated records
+    const allWarehouses = [...warehouseRecords];
+    
+    inventoryWarehouses.forEach(inv => {
+      if (inv.warehouseName && !warehouseMap.has(inv.warehouseName)) {
+        // Create a virtual warehouse record for inventory-only warehouses
+        const virtualWarehouse = {
+          id: 0, // Virtual ID for inventory-only warehouses
+          warehouseName: inv.warehouseName,
+          warehouseCode: inv.warehouseName.replace(/\s+/g, '').toUpperCase(), // Auto-generate code
+          location: null,
+          contactPerson: null,
+          phoneNumber: null,
+          email: null,
+          isCentralWarehouse: false,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        // Add virtual flag as additional property
+        (virtualWarehouse as any).isVirtual = true;
+        allWarehouses.push(virtualWarehouse);
+      }
+    });
+
+    // Sort the final list
+    allWarehouses.sort((a, b) => {
+      // Central warehouses first, then by name
+      if (a.isCentralWarehouse && !b.isCentralWarehouse) return -1;
+      if (!a.isCentralWarehouse && b.isCentralWarehouse) return 1;
+      return a.warehouseName.localeCompare(b.warehouseName);
+    });
+
+    return NextResponse.json({ warehouses: allWarehouses });
   } catch (error: any) {
     console.error("Error fetching warehouses:", error);
     return NextResponse.json({ error: "Failed to fetch warehouses" }, { status: 500 });

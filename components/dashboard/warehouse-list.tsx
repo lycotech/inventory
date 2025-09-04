@@ -13,6 +13,7 @@ interface Warehouse {
   isCentralWarehouse: boolean;
   isActive: boolean;
   createdAt: string;
+  isVirtual?: boolean; // Added for inventory-only warehouses
 }
 
 interface NewWarehouse {
@@ -48,12 +49,18 @@ export function WarehouseList() {
   const fetchWarehouses = async () => {
     try {
       const response = await fetch('/api/warehouses/manage');
+      
       if (response.ok) {
         const data = await response.json();
         setWarehouses(data.warehouses || []);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('API error:', response.status, errorData);
+        setMessage({ type: 'error', text: `Failed to load warehouses: ${errorData.error || 'Unknown error'}` });
       }
     } catch (error) {
       console.error('Error fetching warehouses:', error);
+      setMessage({ type: 'error', text: 'Failed to connect to server' });
     } finally {
       setLoading(false);
     }
@@ -107,6 +114,21 @@ export function WarehouseList() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
+  };
+
+  const handleCreateFromInventory = (warehouse: Warehouse) => {
+    // Pre-fill form with inventory warehouse data
+    setFormData({
+      warehouseName: warehouse.warehouseName,
+      warehouseCode: warehouse.warehouseCode,
+      location: '',
+      contactPerson: '',
+      phoneNumber: '',
+      email: '',
+      isCentralWarehouse: false,
+    });
+    setShowCreateForm(true);
+    setMessage({ type: 'success', text: `Creating warehouse record for "${warehouse.warehouseName}"` });
   };
 
   if (loading) {
@@ -306,10 +328,12 @@ export function WarehouseList() {
         ) : (
           warehouses.map((warehouse) => (
             <div
-              key={warehouse.id}
+              key={`${warehouse.id}-${warehouse.warehouseName}`}
               className={`p-4 rounded-lg border-2 transition-all duration-200 ${
                 warehouse.isCentralWarehouse
                   ? 'border-blue-200 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20'
+                  : warehouse.isVirtual
+                  ? 'border-orange-200 bg-orange-50 dark:border-orange-700 dark:bg-orange-900/20'
                   : 'border-gray-200 bg-white dark:border-gray-600 dark:bg-gray-700'
               }`}
             >
@@ -324,10 +348,20 @@ export function WarehouseList() {
                         Central
                       </span>
                     )}
+                    {warehouse.isVirtual && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300">
+                        From Inventory
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     Code: {warehouse.warehouseCode}
                   </p>
+                  {warehouse.isVirtual && (
+                    <p className="text-xs text-orange-600 dark:text-orange-400 mb-2">
+                      📋 Found in inventory records - click "Create Warehouse Record" to manage this warehouse
+                    </p>
+                  )}
                   {warehouse.location && (
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
                       📍 {warehouse.location}
@@ -347,7 +381,7 @@ export function WarehouseList() {
                     </p>
                   )}
                 </div>
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 flex flex-col gap-2">
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                     warehouse.isActive 
                       ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' 
@@ -355,6 +389,14 @@ export function WarehouseList() {
                   }`}>
                     {warehouse.isActive ? 'Active' : 'Inactive'}
                   </span>
+                  {warehouse.isVirtual && (
+                    <button
+                      onClick={() => handleCreateFromInventory(warehouse)}
+                      className="px-3 py-1 text-xs bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+                    >
+                      Create Record
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
