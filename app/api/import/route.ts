@@ -74,10 +74,10 @@ export async function POST(req: Request) {
     if (missing.length) {
       return NextResponse.json({ ok: false, error: `Missing required column(s): ${missing.join(", ")}. Please download the latest template for 'stock_alert'.` }, { status: 400 });
     }
-  } else if (importType === "warehouse_transfer") {
+  } else if (importType === "stock_transfer" || importType === "warehouse_transfer") {
     const missing = requireCols(["barcode", "fromWarehouse", "toWarehouse", "quantity"]);
     if (missing.length) {
-      return NextResponse.json({ ok: false, error: `Missing required column(s): ${missing.join(", ")}. Please download the latest template for 'warehouse_transfer'.` }, { status: 400 });
+      return NextResponse.json({ ok: false, error: `Missing required column(s): ${missing.join(", ")}. Please download the latest template for 'stock_transfer'.` }, { status: 400 });
     }
   }
 
@@ -214,7 +214,7 @@ export async function POST(req: Request) {
           data: { stockAlertLevel: stockAlertLevel },
         });
         successful++;
-      } else if (importType === "warehouse_transfer") {
+      } else if (importType === "stock_transfer" || importType === "warehouse_transfer") {
         const barcode = String(getVal(row, "barcode") || "").trim();
         const fromWarehouse = String(getVal(row, "fromWarehouse") || "").trim();
         const toWarehouse = String(getVal(row, "toWarehouse") || "").trim();
