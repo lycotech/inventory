@@ -30,6 +30,17 @@ export function WarehouseTransferForm() {
   // Fetch warehouses on component mount
   useEffect(() => {
     fetchWarehouses();
+    
+    // Listen for warehouse creation events
+    const handleWarehouseCreated = () => {
+      fetchWarehouses();
+    };
+    
+    window.addEventListener('warehouse:created', handleWarehouseCreated);
+    
+    return () => {
+      window.removeEventListener('warehouse:created', handleWarehouseCreated);
+    };
   }, []);
 
   const fetchWarehouses = async () => {

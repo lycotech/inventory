@@ -88,6 +88,9 @@ export function WarehouseList() {
         });
         setShowCreateForm(false);
         fetchWarehouses(); // Refresh the list
+        
+        // Emit event to notify other components
+        window.dispatchEvent(new CustomEvent('warehouse:created'));
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to create warehouse' });
       }
