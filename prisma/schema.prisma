@@ -24,6 +24,7 @@ enum TransactionType {
   issue
   adjustment
   transfer
+  stock_out
 }
 
 enum ImportType {
@@ -32,6 +33,7 @@ enum ImportType {
   stock_transfer
   stock_alert
   adjustment
+  stock_out
 }
 
 enum ImportStatus {

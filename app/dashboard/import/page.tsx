@@ -101,6 +101,7 @@ export default function ImportPage() {
                 <option value="full">Full inventory</option>
                 <option value="stock_receive">Stock receive</option>
                 <option value="stock_transfer">Stock transfer</option>
+                <option value="stock_out">Stock out (sales/consumption)</option>
                 <option value="stock_alert">Stock alert levels</option>
                 <option value="adjustment">Adjustment</option>
               </select>
@@ -110,6 +111,7 @@ export default function ImportPage() {
                   <a className="text-xs bg-blue-100 dark:bg-blue-800/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors" href={templateUrl("full")}>full</a>
                   <a className="text-xs bg-blue-100 dark:bg-blue-800/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors" href={templateUrl("stock_receive")}>stock_receive</a>
                   <a className="text-xs bg-blue-100 dark:bg-blue-800/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors" href={templateUrl("stock_transfer")}>stock_transfer</a>
+                  <a className="text-xs bg-blue-100 dark:bg-blue-800/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors" href={templateUrl("stock_out")}>stock_out</a>
                   <a className="text-xs bg-blue-100 dark:bg-blue-800/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors" href={templateUrl("stock_alert")}>stock_alert</a>
                   <a className="text-xs bg-blue-100 dark:bg-blue-800/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors" href={templateUrl("adjustment")}>adjustment</a>
                 </div>

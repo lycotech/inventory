@@ -64,7 +64,7 @@ export async function POST(req: Request) {
     if (missing.length) {
       return NextResponse.json({ ok: false, error: `Missing required column(s): ${missing.join(", ")}. Please download the latest 'full' template.` }, { status: 400 });
     }
-  } else if (importType === "stock_receive" || importType === "stock_issue" || importType === "adjustment") {
+  } else if (importType === "stock_receive" || importType === "stock_issue" || importType === "adjustment" || importType === "stock_out") {
     const missing = requireCols(["barcode", "warehouseName", "quantity"]);
     if (missing.length) {
       return NextResponse.json({ ok: false, error: `Missing required column(s): ${missing.join(", ")}. Please download the latest template for '${importType}'.` }, { status: 400 });
@@ -168,7 +168,7 @@ export async function POST(req: Request) {
           update: { ...data },
         });
         successful++;
-      } else if (importType === "stock_receive" || importType === "stock_issue" || importType === "adjustment") {
+      } else if (importType === "stock_receive" || importType === "stock_issue" || importType === "adjustment" || importType === "stock_out") {
         const barcode = String(getVal(row, "barcode") || "").trim();
         const warehouseName = String(getVal(row, "warehouseName") || "").trim();
         const qty = toInt(getVal(row, "quantity"));
@@ -178,7 +178,10 @@ export async function POST(req: Request) {
         const invId = await getInventoryId(barcode, warehouseName);
         if (!invId) throw new Error(`inventory not found for ${barcode} in warehouse ${warehouseName}`);
 
-        const txType = importType === "stock_receive" ? "receive" : importType === "stock_issue" ? "issue" : "adjustment";
+        const txType = importType === "stock_receive" ? "receive" : 
+                      importType === "stock_issue" ? "issue" : 
+                      importType === "stock_out" ? "stock_out" : 
+                      "adjustment";
         await prisma.stockTransaction.create({
           data: {
             inventoryId: invId,

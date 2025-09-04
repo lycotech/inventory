@@ -9,6 +9,7 @@ const TEMPLATES: Record<string, string> = {
   stock_transfer: "barcode,fromWarehouse,toWarehouse,quantity,referenceDoc,reason\nYOUR_BARCODE,Your Central Warehouse,Your Branch Warehouse,5,TRF-001,Stock transfer between warehouses\n",
   stock_alert: "barcode,warehouseName,stockAlertLevel\nYOUR_BARCODE,Your Warehouse,10\nANOTHER_BARCODE,Your Warehouse,5\n",
   adjustment: "barcode,warehouseName,quantity,reason\nYOUR_BARCODE,Your Warehouse,-1,Stock adjustment\n",
+  stock_out: "barcode,warehouseName,quantity,referenceDoc,reason\nYOUR_BARCODE,Your Warehouse,3,SALE-001,Item sold to customer\nANOTHER_BARCODE,Your Warehouse,1,CONS-001,Item consumed/used\n",
 };
 
 export async function GET(_: Request, ctx: { params: Promise<{ type: string }> }) {

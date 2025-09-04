@@ -1,0 +1,4 @@
+barcode,fromWarehouse,toWarehouse,quantity,referenceDoc,reason
+TEST001,Central Warehouse,WHS Male Quarters,5,TRF-001,Transfer for branch operations
+TEST002,Central Warehouse,WHS Male Quarters,10,TRF-002,Monthly stock distribution
+TEST003,WHS Male Quarters,Central Warehouse,2,TRF-003,Return to central warehouse
