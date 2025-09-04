@@ -34,9 +34,9 @@ const items: NavItem[] = [
     label: "Inventory",
     icon: Boxes,
     children: [
-      { label: "Stock Item", href: "/dashboard/inventory/stock-items" },
+      { label: "Stock Items", href: "/dashboard/inventory/stock-items" },
       { label: "Manage Stock", href: "/dashboard/inventory" },
-      // { label: "Warehouse Transfer", href: "/dashboard/warehouse-transfer" }, // Disabled - functionality moved to Stock Transfer
+      { label: "Warehouse Management", href: "/dashboard/warehouse-transfer" },
     ],
   },
   { label: "Import Data", href: "/dashboard/import", icon: FileUp },

@@ -111,7 +111,7 @@ export function WarehouseList() {
       <div className="space-y-3">
         {[1, 2, 3].map((i) => (
           <div key={i} className="animate-pulse">
-            <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+            <div className="h-20 bg-gray-200 rounded-lg"></div>
           </div>
         ))}
       </div>
@@ -122,10 +122,10 @@ export function WarehouseList() {
     <div className="space-y-4">
       {/* Create Warehouse Button */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Warehouse List</h3>
+        <h3 className="text-lg font-medium text-gray-900">Warehouse List</h3>
         <button
           onClick={() => setShowCreateForm(!showCreateForm)}
-          className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+          className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
           <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -136,7 +136,7 @@ export function WarehouseList() {
 
       {/* Success/Error Messages */}
       {message && (
-        <div className={`p-3 rounded-md ${message.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+        <div className={`p-3 rounded-md ${message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
           <div className="flex">
             <div className="flex-shrink-0">
               {message.type === 'success' ? (
@@ -272,14 +272,14 @@ export function WarehouseList() {
                   setShowCreateForm(false);
                   setMessage(null);
                 }}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={creating}
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
               >
                 {creating ? 'Creating...' : 'Create Warehouse'}
               </button>
@@ -300,6 +300,7 @@ export function WarehouseList() {
             <p className="text-lg font-medium">No warehouses configured</p>
             <p className="text-sm">Click "Add Warehouse" to create your first warehouse</p>
           </div>
+        ) : (
         ) : (
           warehouses.map((warehouse) => (
             <div
