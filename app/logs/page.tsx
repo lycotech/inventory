@@ -258,6 +258,37 @@ function SystemAlerts({ alerts }: { alerts: any[] }) {
 }
 
 function ImportErrors({ imports }: { imports: any[] }) {
+  const [selectedImport, setSelectedImport] = useState<any>(null);
+  const [importDetails, setImportDetails] = useState<any>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  const fetchImportDetails = async (importId: number) => {
+    setLoadingDetails(true);
+    try {
+      const response = await fetch(`/api/logs/imports/${importId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setImportDetails(data.importDetails);
+      } else {
+        console.error('Failed to fetch import details');
+      }
+    } catch (error) {
+      console.error('Error fetching import details:', error);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  const openImportDetails = (importItem: any) => {
+    setSelectedImport(importItem);
+    fetchImportDetails(importItem.id);
+  };
+
+  const closeModal = () => {
+    setSelectedImport(null);
+    setImportDetails(null);
+  };
+
   if (imports.length === 0) {
     return (
       <div className="p-8 text-center">
@@ -268,24 +299,198 @@ function ImportErrors({ imports }: { imports: any[] }) {
   }
 
   return (
-    <div className="p-6">
-      <h3 className="text-lg font-semibold mb-4">Failed Imports</h3>
-      <div className="space-y-4">
-        {imports.map((importItem) => (
-          <div key={importItem.id} className="border-l-4 border-orange-500 bg-orange-50 p-4 rounded">
-            <div className="flex justify-between items-start">
-              <div>
-                <h4 className="font-medium">{importItem.filename}</h4>
-                <p className="text-sm text-gray-600">User: {importItem.processor?.username}</p>
-                <p className="text-sm text-orange-600">Status: {importItem.importStatus}</p>
-                <p className="text-sm text-red-600">Failed Records: {importItem.failedRecords}</p>
+    <>
+      <div className="p-6">
+        <h3 className="text-lg font-semibold mb-4">Failed Imports</h3>
+        <div className="space-y-4">
+          {imports.map((importItem) => (
+            <div key={importItem.id} className="border-l-4 border-orange-500 bg-orange-50 p-4 rounded">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h4 className="font-medium">{importItem.filename}</h4>
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      importItem.importStatus === 'failed' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {importItem.importStatus.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Type:</span>
+                      <span className="ml-1 font-medium">{importItem.importType.replace('_', ' ').toUpperCase()}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Total:</span>
+                      <span className="ml-1 font-medium">{importItem.totalRecords}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Success:</span>
+                      <span className="ml-1 font-medium text-green-600">{importItem.successfulRecords}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Failed:</span>
+                      <span className="ml-1 font-medium text-red-600">{importItem.failedRecords}</span>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-sm text-gray-600">
+                    <span>Processed by: {importItem.processor?.firstName ? 
+                      `${importItem.processor.firstName} ${importItem.processor.lastName}` : 
+                      importItem.processor?.username}</span>
+                  </div>
+                  <button
+                    onClick={() => openImportDetails(importItem)}
+                    className="mt-3 text-sm bg-orange-600 text-white px-3 py-1 rounded hover:bg-orange-700 transition-colors"
+                  >
+                    View Details
+                  </button>
+                </div>
+                <span className="text-xs text-gray-500 ml-4">
+                  {new Date(importItem.createdAt).toLocaleString()}
+                </span>
               </div>
-              <span className="text-xs text-gray-500">
-                {new Date(importItem.createdAt).toLocaleString()}
-              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Modal for Import Details */}
+      {selectedImport && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Import Details: {selectedImport.filename}</h3>
+                <button
+                  onClick={closeModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              {loadingDetails ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto"></div>
+                  <p className="mt-2 text-gray-600">Loading details...</p>
+                </div>
+              ) : importDetails ? (
+                <ImportDetailsContent details={importDetails} />
+              ) : (
+                <p className="text-gray-500">Failed to load import details.</p>
+              )}
             </div>
           </div>
-        ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function ImportDetailsContent({ details }: { details: any }) {
+  return (
+    <div className="space-y-6">
+      {/* Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="text-sm text-gray-600">Import Type</div>
+          <div className="font-semibold">{details.importType.replace('_', ' ').toUpperCase()}</div>
+        </div>
+        <div className="bg-green-50 p-4 rounded-lg">
+          <div className="text-sm text-gray-600">Success Rate</div>
+          <div className="font-semibold text-green-600">{details.summary.successRate}%</div>
+        </div>
+        <div className="bg-red-50 p-4 rounded-lg">
+          <div className="text-sm text-gray-600">Failure Rate</div>
+          <div className="font-semibold text-red-600">{details.summary.failureRate}%</div>
+        </div>
+      </div>
+
+      {/* Record Breakdown */}
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <h4 className="font-semibold mb-3">Record Breakdown</h4>
+        <div className="grid grid-cols-3 gap-4 text-center">
+          <div>
+            <div className="text-2xl font-bold text-gray-900">{details.totalRecords}</div>
+            <div className="text-sm text-gray-600">Total Records</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-green-600">{details.successfulRecords}</div>
+            <div className="text-sm text-gray-600">Successful</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-red-600">{details.failedRecords}</div>
+            <div className="text-sm text-gray-600">Failed</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Related Transactions */}
+      {details.relatedTransactions && details.relatedTransactions.length > 0 && (
+        <div>
+          <h4 className="font-semibold mb-3">Related Transactions ({details.relatedTransactions.length})</h4>
+          <div className="max-h-64 overflow-y-auto border rounded-lg">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Warehouse</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {details.relatedTransactions.map((tx: any) => (
+                  <tr key={tx.id}>
+                    <td className="px-4 py-2 text-sm">{tx.inventory.itemName}</td>
+                    <td className="px-4 py-2 text-sm">{tx.transactionType}</td>
+                    <td className="px-4 py-2 text-sm">{tx.quantity}</td>
+                    <td className="px-4 py-2 text-sm">{tx.inventory.warehouseName}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Related Alerts */}
+      {details.relatedAlerts && details.relatedAlerts.length > 0 && (
+        <div>
+          <h4 className="font-semibold mb-3">Related Alerts ({details.relatedAlerts.length})</h4>
+          <div className="space-y-2">
+            {details.relatedAlerts.map((alert: any) => (
+              <div key={alert.id} className="p-3 bg-yellow-50 border border-yellow-200 rounded">
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium">{alert.inventory.itemName}</span>
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    alert.priorityLevel === 'high' ? 'bg-red-100 text-red-800' :
+                    alert.priorityLevel === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-blue-100 text-blue-800'
+                  }`}>
+                    {alert.priorityLevel.toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">{alert.message}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Processor Information */}
+      <div className="bg-blue-50 p-4 rounded-lg">
+        <h4 className="font-semibold mb-2">Processed By</h4>
+        <div className="text-sm">
+          <div><strong>User:</strong> {details.processor.firstName ? 
+            `${details.processor.firstName} ${details.processor.lastName}` : 
+            details.processor.username}</div>
+          <div><strong>Processed:</strong> {new Date(details.createdAt).toLocaleString()}</div>
+        </div>
       </div>
     </div>
   );

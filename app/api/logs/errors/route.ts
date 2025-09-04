@@ -76,25 +76,33 @@ export async function GET(req: Request) {
       take: 20
     });
 
-    // Get import histories with errors
+    // Get import histories with errors - include more details
     const failedImports = await prisma.importHistory.findMany({
       where: {
-        importStatus: 'failed'
+        OR: [
+          { importStatus: 'failed' },
+          { failedRecords: { gt: 0 } } // Include imports with some failures
+        ]
       },
       select: {
         id: true,
         filename: true,
+        importType: true,
         importStatus: true,
+        totalRecords: true,
+        successfulRecords: true,
         failedRecords: true,
         createdAt: true,
         processor: {
           select: {
-            username: true
+            username: true,
+            firstName: true,
+            lastName: true
           }
         }
       },
       orderBy: { createdAt: 'desc' },
-      take: 10
+      take: 20
     });
 
     // Get items with negative stock (data integrity issues)

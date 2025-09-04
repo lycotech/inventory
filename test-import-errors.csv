@@ -1,0 +1,6 @@
+Barcode,ItemName,Category,WarehouseName,StockQty,StockAlertLevel
+TEST001,Test Item 1,Electronics,Main Warehouse,100,10
+INVALID,,,Bad Warehouse,abc,xyz
+TEST003,Test Item 3,Electronics,,50,5
+,Missing Barcode Item,Electronics,Main Warehouse,75,8
+TEST005,Test Item 5,Electronics,Non-Existent Warehouse,200,15
