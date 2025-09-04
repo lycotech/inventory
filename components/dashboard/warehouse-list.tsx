@@ -326,9 +326,9 @@ export function WarehouseList() {
             <p className="text-sm">Click "Add Warehouse" to create your first warehouse</p>
           </div>
         ) : (
-          warehouses.map((warehouse) => (
+          warehouses.map((warehouse, index) => (
             <div
-              key={`${warehouse.id}-${warehouse.warehouseName}`}
+              key={warehouse.isVirtual ? `virtual-${warehouse.warehouseName}-${index}` : `warehouse-${warehouse.id}`}
               className={`p-4 rounded-lg border-2 transition-all duration-200 ${
                 warehouse.isCentralWarehouse
                   ? 'border-blue-200 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20'

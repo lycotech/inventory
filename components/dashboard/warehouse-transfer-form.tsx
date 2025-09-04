@@ -11,6 +11,7 @@ interface Warehouse {
   warehouseCode: string;
   isCentralWarehouse: boolean;
   location?: string;
+  isVirtual?: boolean; // Added for inventory-only warehouses
 }
 
 export function WarehouseTransferForm() {
@@ -140,8 +141,11 @@ export function WarehouseTransferForm() {
                 {centralWarehouse.warehouseName} (Central)
               </option>
             )}
-            {branchWarehouses.map(warehouse => (
-              <option key={warehouse.id} value={warehouse.warehouseName}>
+            {branchWarehouses.map((warehouse, index) => (
+              <option 
+                key={warehouse.isVirtual ? `from-virtual-${warehouse.warehouseName}-${index}` : `from-warehouse-${warehouse.id}`} 
+                value={warehouse.warehouseName}
+              >
                 {warehouse.warehouseName}
               </option>
             ))}
@@ -163,8 +167,11 @@ export function WarehouseTransferForm() {
                 {centralWarehouse.warehouseName} (Central)
               </option>
             )}
-            {branchWarehouses.map(warehouse => (
-              <option key={warehouse.id} value={warehouse.warehouseName}>
+            {branchWarehouses.map((warehouse, index) => (
+              <option 
+                key={warehouse.isVirtual ? `to-virtual-${warehouse.warehouseName}-${index}` : `to-warehouse-${warehouse.id}`} 
+                value={warehouse.warehouseName}
+              >
                 {warehouse.warehouseName}
               </option>
             ))}
