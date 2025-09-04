@@ -194,9 +194,9 @@ export async function POST(req: Request) {
           },
         });
         // Adjust inventory stockQty accordingly
-  await prisma.inventory.update({
+        await prisma.inventory.update({
           where: { id: invId },
-          data: { stockQty: { increment: txType === "issue" ? -Math.abs(qty) : Math.abs(qty) } },
+          data: { stockQty: { increment: (txType === "issue" || txType === "stock_out") ? -Math.abs(qty) : Math.abs(qty) } },
         });
         successful++;
       } else if (importType === "stock_alert") {
