@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
+import { getSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function PATCH(req: Request) {
   try {
-    const session = await getServerSession();
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Basic users cannot modify stock alert levels - this is a management function
+    if (session.user.role === "user") {
+      return NextResponse.json({ error: "Insufficient permissions. Only managers and admins can adjust stock alert levels." }, { status: 403 });
     }
 
     const { id, stockAlertLevel } = await req.json();
