@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Settings, Palette, Bell, FileText, Upload, Image, Trash2 } from "lucide-react";
+import { AccessControl } from "@/components/access-control";
 
 type SettingsMap = Record<string, any>;
 
-export default function SettingsPage() {
+function SettingsContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
@@ -397,5 +398,13 @@ export default function SettingsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <AccessControl requiredRoles={["admin"]}>
+      <SettingsContent />
+    </AccessControl>
   );
 }

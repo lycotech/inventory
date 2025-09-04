@@ -1,8 +1,19 @@
+"use client";
+
 import { Suspense } from "react";
 import { WarehouseTransferForm } from "@/components/dashboard/warehouse-transfer-form";
 import { WarehouseList } from "@/components/dashboard/warehouse-list";
+import { AccessControl } from "@/components/access-control";
 
 export default function WarehouseTransferPage() {
+  return (
+    <AccessControl requiredRoles={["admin", "manager"]}>
+      <WarehouseTransferContent />
+    </AccessControl>
+  );
+}
+
+function WarehouseTransferContent() {
   return (
     <div className="space-y-8">
       <div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { AccessControl } from "@/components/access-control";
 
 type ImportResult = {
   ok: boolean;
@@ -15,7 +16,7 @@ type ImportResult = {
   errors?: { row: number; message: string }[];
 };
 
-export default function ImportPage() {
+function ImportContent() {
   const [file, setFile] = useState<File | null>(null);
   const [type, setType] = useState("full");
   const [loading, setLoading] = useState(false);
@@ -463,4 +464,12 @@ function daysUntil(dateString: string) {
   const d = new Date(dateString).getTime();
   const now = Date.now();
   return Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+}
+
+export default function ImportPage() {
+  return (
+    <AccessControl requiredRoles={["admin", "manager"]}>
+      <ImportContent />
+    </AccessControl>
+  );
 }

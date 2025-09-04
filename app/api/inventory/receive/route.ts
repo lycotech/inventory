@@ -9,6 +9,12 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  
+  // Role-based access control: only admin and manager can receive stock
+  if (session.user.role === "user") {
+    return NextResponse.json({ error: "Forbidden: Admin or Manager access required" }, { status: 403 });
+  }
+  
   const body = await req.json().catch(() => ({}));
   const { barcode, warehouseName, quantity, referenceDoc, reason, allowNonCentral } = body as {
     barcode?: string;

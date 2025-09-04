@@ -17,6 +17,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
     
+    // Role-based access control: only admin and manager can import
+    if (session.user.role === "user") {
+      console.log("Access denied for basic user");
+      return NextResponse.json({ ok: false, error: "Forbidden: Admin or Manager access required" }, { status: 403 });
+    }
+    
     console.log("Session found, user ID:", session.user.id);
 
     const form = await req.formData();

@@ -27,6 +27,25 @@ async function main() {
     console.log("✅ Admin user already exists:", username);
   }
 
+  // Ensure basic test user exists
+  const basicUser = await prisma.user.findUnique({ where: { username: "basic" } });
+  if (!basicUser) {
+    const basicPasswordHash = await bcrypt.hash("basic123", 10);
+    await prisma.user.create({ 
+      data: { 
+        username: "basic", 
+        email: "basic@example.com", 
+        passwordHash: basicPasswordHash, 
+        role: "user" as any,
+        firstName: "Basic",
+        lastName: "User"
+      } 
+    });
+    console.log("✅ Basic user created: basic");
+  } else {
+    console.log("✅ Basic user already exists: basic");
+  }
+
   // Create essential aging categories if they don't exist
   const agingCategoriesCount = await prisma.agingCategory.count();
   if (agingCategoriesCount === 0) {

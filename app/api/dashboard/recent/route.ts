@@ -8,6 +8,11 @@ export async function GET() {
 
   // Last 10 transactions with inventory and basic info
   const tx = await prisma.stockTransaction.findMany({
+    where: {
+      transactionType: {
+        in: ['receive', 'issue', 'adjustment', 'transfer', 'stock_out']
+      }
+    },
     orderBy: { transactionDate: "desc" },
     take: 10,
     include: { inventory: true },

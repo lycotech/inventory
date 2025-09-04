@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { AccessControl } from "@/components/access-control";
 
 type UserRow = {
   id: number;
@@ -14,7 +15,7 @@ type UserRow = {
   lastLogin: string | null;
 };
 
-export default function UsersPage() {
+function UsersContent() {
   const [role, setRole] = useState<"admin" | "manager" | "user" | null>(null);
   useEffect(() => {
     (async () => {
@@ -480,6 +481,14 @@ function UserRowItem({ row }: { row: UserRow }) {
         </div>
       )}
     </div>
+  );
+}
+
+export default function UsersPage() {
+  return (
+    <AccessControl requiredRoles={["admin"]}>
+      <UsersContent />
+    </AccessControl>
   );
 }
 

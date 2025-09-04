@@ -55,6 +55,8 @@ export function Sidebar() {
   const [appName, setAppName] = useState<string>("InvAlert");
   const [logoUrl, setLogoUrl] = useState<string>("");
   const [logoErr, setLogoErr] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
   useEffect(() => {
     (async () => {
       try {
@@ -69,6 +71,44 @@ export function Sidebar() {
       } catch {}
     })();
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/api/auth/me", { cache: "no-store" });
+        if (r.ok) {
+          const data = await r.json();
+          setUserRole(data?.user?.role || null);
+        }
+      } catch {}
+    })();
+  }, []);
+
+  // Filter items based on user role
+  const getFilteredItems = (): NavItem[] => {
+    if (userRole === "user") {
+      // Basic access users can only see: Dashboard, Inventory (Stock Items only), Alert, Report, Stock Aging
+      return [
+        { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        {
+          label: "Inventory",
+          icon: Boxes,
+          children: [
+            { label: "Stock Items", href: "/dashboard/inventory/stock-items" },
+          ],
+        },
+        { label: "Alert", href: "/dashboard/alerts", icon: Bell },
+        { label: "Report", href: "/dashboard/reports", icon: BarChart3 },
+        { label: "Stock Aging", href: "/dashboard/stock-aging", icon: BarChart3 },
+        { label: "Profile", href: "/dashboard/profile", icon: User },
+      ];
+    }
+    
+    // Admin and manager users see all items
+    return items;
+  };
+
+  const filteredItems = getFilteredItems();
 
   return (
     <aside className="h-screen sticky top-0 w-64 hidden md:flex md:flex-col bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-800/50 shadow-xl">
@@ -98,7 +138,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-        {items.map((item) => {
+        {filteredItems.map((item) => {
           const isGroup = (item as any).children?.length;
           const Icon = item.icon as any;
           if (!isGroup) {

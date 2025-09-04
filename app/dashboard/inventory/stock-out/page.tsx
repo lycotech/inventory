@@ -3,8 +3,17 @@
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { AccessControl } from "@/components/access-control";
 
 export default function StockOutPage() {
+  return (
+    <AccessControl requiredRoles={["admin", "manager"]}>
+      <StockOutContent />
+    </AccessControl>
+  );
+}
+
+function StockOutContent() {
   return (
     <div className="space-y-8">
       {/* Header */}

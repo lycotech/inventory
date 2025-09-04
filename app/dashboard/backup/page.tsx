@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AccessControl } from "@/components/access-control";
 
-export default function BackupPage() {
+function BackupContent() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
@@ -65,5 +66,13 @@ export default function BackupPage() {
         <div className="text-xs text-muted-foreground">You need admin privileges to export backups.</div>
       )}
     </div>
+  );
+}
+
+export default function BackupPage() {
+  return (
+    <AccessControl requiredRoles={["admin"]}>
+      <BackupContent />
+    </AccessControl>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useSearchParams, useRouter } from "next/navigation";
+import { AccessControl } from "@/components/access-control";
 
 type TxRow = {
   id: number;
@@ -19,6 +20,14 @@ type TxRow = {
 };
 
 export default function InventoryPage() {
+  return (
+    <AccessControl requiredRoles={["admin", "manager"]}>
+      <ManageStockContent />
+    </AccessControl>
+  );
+}
+
+function ManageStockContent() {
   const router = useRouter();
 
   const handleManageStockItems = () => {
