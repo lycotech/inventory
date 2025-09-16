@@ -30,7 +30,7 @@ export default function StockItemsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [warehouses, setWarehouses] = useState<string[]>([]);
+  const [warehouses, setWarehouses] = useState<{id: number; warehouseName: string; warehouseCode: string; location?: string}[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [warehouse, setWarehouse] = useState(initialWh);
   const [category, setCategory] = useState(initialCat);
@@ -72,8 +72,8 @@ export default function StockItemsPage() {
           fetch("/api/warehouses/list", { cache: "no-store" }).then(r => r.ok ? r.json() : { warehouses: [] }).catch(() => ({ warehouses: [] })),
           fetch("/api/categories/list", { cache: "no-store" }).then(r => r.ok ? r.json() : { categories: [] }).catch(() => ({ categories: [] })),
         ]);
-        setWarehouses(w.warehouses || []);
-        setCategories(c.categories || []);
+        setWarehouses(Array.isArray(w.warehouses) ? w.warehouses.filter(Boolean) : []);
+        setCategories(Array.isArray(c.categories) ? c.categories.filter(Boolean) : []);
       } catch {}
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -166,8 +166,10 @@ export default function StockItemsPage() {
                 onChange={(e) => { setWarehouse(e.target.value); setPage(1); syncUrl({ warehouse: e.target.value || "", page: 1 }); load(q, 1, limit, e.target.value, category); }}
               >
                 <option value="">All</option>
-                {warehouses.map((w) => (
-                  <option key={w} value={w}>{w}</option>
+                {warehouses.map((w, index) => (
+                  <option key={`warehouse-${w.id || index}`} value={w.warehouseName}>
+                    {w.warehouseName}
+                  </option>
                 ))}
               </select>
             </div>
@@ -179,9 +181,13 @@ export default function StockItemsPage() {
                 onChange={(e) => { setCategory(e.target.value); setPage(1); syncUrl({ category: e.target.value || "", page: 1 }); load(q, 1, limit, warehouse, e.target.value); }}
               >
                 <option value="">All</option>
-                {categories.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
+                {categories.map((c, index) => {
+                  const category = typeof c === 'string' ? c : ((c as any)?.categoryName || (c as any)?.name || String(c));
+                  const keyValue = `category-${index}-${category}`;
+                  return (
+                    <option key={keyValue} value={category}>{category}</option>
+                  );
+                })}
               </select>
             </div>
             <div className="flex items-center gap-2 text-sm">

@@ -100,6 +100,11 @@ model User {
   sessions        UserSession[]
   reports         Report[]        @relation("ReportCreatedBy")
   reportRuns      ReportExecution[] @relation("ReportExecutedBy")
+  
+  // Batch relations
+  createdBatches  Batch[]         @relation("BatchCreatedBy")
+  processedBatchTx BatchTransaction[] @relation("BatchTxProcessedBy")
+  acknowledgedBatchAlerts BatchAlert[] @relation("BatchAlertAcknowledgedBy")
 }
 
 model Inventory {
@@ -122,6 +127,7 @@ model Inventory {
   transactions     StockTransaction[]
   alertLogs        AlertLog[]
   stockAging       StockAging[]
+  batches          Batch[]
 
   @@unique([barcode, warehouseName], name: "barcode_warehouse")
 }
@@ -142,6 +148,11 @@ model Warehouse {
   // Relations for transfers
   transfersFrom   StockTransaction[] @relation("TransferFromWarehouse")
   transfersTo     StockTransaction[] @relation("TransferToWarehouse")
+  
+  // Batch relations
+  batches         Batch[]
+  batchTransfersFrom BatchTransaction[] @relation("BatchTransferFromWarehouse")
+  batchTransfersTo   BatchTransaction[] @relation("BatchTransferToWarehouse")
 }
 
 model StockTransaction {
@@ -200,6 +211,87 @@ model StockAging {
 
   @@index([inventoryId])
   @@index([agingCategoryId])
+}
+
+model Batch {
+  id               Int       @id @default(autoincrement())
+  batchNumber      String    @unique @db.VarChar(100)
+  inventoryId      Int
+  warehouseId      Int
+  quantityReceived Int
+  quantityRemaining Int
+  manufactureDate  DateTime?
+  expiryDate       DateTime
+  expireDateAlert  Int       @default(30)
+  supplierInfo     String?   @db.VarChar(255)
+  lotNumber        String?   @db.VarChar(100)
+  costPerUnit      Decimal?  @db.Decimal(10, 2)
+  notes            String?   @db.Text
+  isActive         Boolean   @default(true)
+  createdBy        Int
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  inventory        Inventory @relation(fields: [inventoryId], references: [id])
+  warehouse        Warehouse @relation(fields: [warehouseId], references: [id])
+  creator          User      @relation("BatchCreatedBy", fields: [createdBy], references: [id])
+  transactions     BatchTransaction[]
+  alertLogs        BatchAlert[]
+
+  @@index([inventoryId])
+  @@index([warehouseId])
+  @@index([expiryDate])
+  @@index([batchNumber])
+}
+
+model BatchTransaction {
+  id               Int             @id @default(autoincrement())
+  batchId          Int
+  transactionType  TransactionType
+  quantity         Int
+  transactionDate  DateTime
+  referenceDoc     String?
+  reason           String?
+  processedBy      Int
+  fromWarehouseId  Int?
+  toWarehouseId    Int?
+  createdAt        DateTime        @default(now())
+
+  // Relations
+  batch            Batch           @relation(fields: [batchId], references: [id])
+  processor        User            @relation("BatchTxProcessedBy", fields: [processedBy], references: [id])
+  fromWarehouse    Warehouse?      @relation("BatchTransferFromWarehouse", fields: [fromWarehouseId], references: [id])
+  toWarehouse      Warehouse?      @relation("BatchTransferToWarehouse", fields: [toWarehouseId], references: [id])
+
+  @@index([batchId])
+  @@index([transactionDate])
+}
+
+enum BatchAlertType {
+  expiring_soon    // Within warning period
+  expired          // Past expiry date
+  low_quantity     // Below threshold
+}
+
+model BatchAlert {
+  id              Int             @id @default(autoincrement())
+  batchId         Int
+  alertType       BatchAlertType
+  message         String
+  priorityLevel   PriorityLevel   @default(medium)
+  acknowledged    Boolean         @default(false)
+  acknowledgedBy  Int?
+  acknowledgedAt  DateTime?
+  createdAt       DateTime        @default(now())
+
+  // Relations
+  batch           Batch           @relation(fields: [batchId], references: [id])
+  acknowledgedUser User?          @relation("BatchAlertAcknowledgedBy", fields: [acknowledgedBy], references: [id])
+
+  @@index([batchId])
+  @@index([alertType])
+  @@index([acknowledged])
 }
 
 model ImportHistory {

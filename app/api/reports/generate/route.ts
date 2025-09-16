@@ -100,6 +100,231 @@ export async function GET(req: Request) {
     }));
     headers = ["date", "type", "itemName", "barcode", "warehouse", "qty", "reference", "reason", "by"];
     filenameBase = `stock_movement_${startDate.toISOString().slice(0,10)}_${endDate.toISOString().slice(0,10)}`;
+  } else if (type === "dead_stock") {
+    const days = Math.max(0, parseInt(String(url.searchParams.get("days") || "90")) || 90);
+    // Dead stock = items with no transactions in the last X days
+    const raw: any[] = await prisma.$queryRaw`
+      SELECT 
+        i.itemName, 
+        i.barcode, 
+        i.warehouseName as warehouse, 
+        i.category, 
+        i.stockQty as qty,
+        COALESCE(MAX(st.transactionDate), i.createdAt) as lastMovement,
+        DATEDIFF(NOW(), COALESCE(MAX(st.transactionDate), i.createdAt)) as daysStagnant
+      FROM Inventory i
+      LEFT JOIN StockTransaction st ON i.id = st.inventoryId
+      GROUP BY i.id
+      HAVING daysStagnant >= ${days}
+      ORDER BY daysStagnant DESC, i.itemName ASC
+    `;
+    rows = raw.map((r: any) => ({
+      ...r,
+      lastMovement: r.lastMovement ? new Date(r.lastMovement).toISOString().slice(0, 10) : '',
+    }));
+    headers = ["itemName", "barcode", "warehouse", "category", "qty", "lastMovement", "daysStagnant"];
+    filenameBase = `dead_stock_${days}d_${new Date().toISOString().slice(0,10)}`;
+  } else if (type === "low_stock_by_warehouse") {
+    const warehouseFilter = String(url.searchParams.get("warehouse") || "");
+    let query = `
+      SELECT itemName, barcode, warehouseName as warehouse, category, stockQty as qty, stockAlertLevel as alert
+      FROM Inventory
+      WHERE stockAlertLevel > 0 AND stockQty <= stockAlertLevel
+    `;
+    if (warehouseFilter) {
+      query += ` AND warehouseName = '${warehouseFilter.replace(/'/g, "''")}'`;
+    }
+    query += ` ORDER BY warehouseName ASC, itemName ASC`;
+    
+    const raw: any[] = await prisma.$queryRawUnsafe(query);
+    rows = raw;
+    headers = ["itemName", "barcode", "warehouse", "category", "qty", "alert"];
+    filenameBase = `low_stock_by_warehouse_${new Date().toISOString().slice(0,10)}`;
+  } else if (type === "receive_summary") {
+    const start = String(url.searchParams.get("start") || "");
+    const end = String(url.searchParams.get("end") || "");
+    const startDate = start ? new Date(start) : new Date(Date.now() - 30 * 86400000);
+    const endDate = end ? new Date(end) : new Date();
+    const raw: any[] = await prisma.$queryRaw`
+      SELECT 
+        DATE_FORMAT(st.transactionDate, '%Y-%m-%d') as date,
+        i.itemName,
+        i.barcode,
+        i.warehouseName as warehouse,
+        i.category,
+        st.quantity,
+        st.referenceDoc as reference,
+        u.username as receivedBy
+      FROM StockTransaction st
+      JOIN Inventory i ON st.inventoryId = i.id
+      JOIN User u ON st.processedBy = u.id
+      WHERE st.transactionType = 'receive'
+        AND st.transactionDate >= ${startDate}
+        AND st.transactionDate <= ${endDate}
+      ORDER BY st.transactionDate DESC
+    `;
+    rows = raw;
+    headers = ["date", "itemName", "barcode", "warehouse", "category", "quantity", "reference", "receivedBy"];
+    filenameBase = `receive_summary_${startDate.toISOString().slice(0,10)}_${endDate.toISOString().slice(0,10)}`;
+  } else if (type === "user_activity") {
+    const start = String(url.searchParams.get("start") || "");
+    const end = String(url.searchParams.get("end") || "");
+    const startDate = start ? new Date(start) : new Date(Date.now() - 7 * 86400000);
+    const endDate = end ? new Date(end) : new Date();
+    const raw: any[] = await prisma.$queryRaw`
+      SELECT 
+        u.username,
+        u.role,
+        DATE_FORMAT(st.transactionDate, '%Y-%m-%d %H:%i:%s') as activity_time,
+        st.transactionType as activity_type,
+        i.itemName,
+        st.quantity,
+        st.reason
+      FROM StockTransaction st
+      JOIN User u ON st.processedBy = u.id
+      JOIN Inventory i ON st.inventoryId = i.id
+      WHERE st.transactionDate >= ${startDate}
+        AND st.transactionDate <= ${endDate}
+      
+      UNION ALL
+      
+      SELECT 
+        u.username,
+        u.role,
+        DATE_FORMAT(ih.createdAt, '%Y-%m-%d %H:%i:%s') as activity_time,
+        CONCAT('import_', ih.importType) as activity_type,
+        CONCAT(ih.totalRecords, ' records') as itemName,
+        ih.successRecords as quantity,
+        ih.status as reason
+      FROM ImportHistory ih
+      JOIN User u ON ih.processedBy = u.id
+      WHERE ih.createdAt >= ${startDate}
+        AND ih.createdAt <= ${endDate}
+      
+      ORDER BY activity_time DESC
+    `;
+    rows = raw;
+    headers = ["username", "role", "activity_time", "activity_type", "itemName", "quantity", "reason"];
+    filenameBase = `user_activity_${startDate.toISOString().slice(0,10)}_${endDate.toISOString().slice(0,10)}`;
+  } else if (type === "import_statistics") {
+    const start = String(url.searchParams.get("start") || "");
+    const end = String(url.searchParams.get("end") || "");
+    const startDate = start ? new Date(start) : new Date(Date.now() - 30 * 86400000);
+    const endDate = end ? new Date(end) : new Date();
+    const imports = await prisma.importHistory.findMany({
+      where: { createdAt: { gte: startDate, lte: endDate } },
+      include: { processor: true },
+      orderBy: { createdAt: "desc" },
+    });
+    rows = imports.map((imp: any) => ({
+      date: imp.createdAt.toISOString().slice(0, 10),
+      importType: imp.importType,
+      totalRecords: imp.totalRecords,
+      successRecords: imp.successRecords,
+      errorRecords: imp.errorRecords,
+      status: imp.status,
+      processedBy: imp.processor.username,
+      fileName: imp.fileName || '',
+      successRate: imp.totalRecords > 0 ? Math.round((imp.successRecords / imp.totalRecords) * 100) + '%' : '0%'
+    }));
+    headers = ["date", "importType", "totalRecords", "successRecords", "errorRecords", "status", "processedBy", "fileName", "successRate"];
+    filenameBase = `import_statistics_${startDate.toISOString().slice(0,10)}_${endDate.toISOString().slice(0,10)}`;
+  } else if (type === "alert_response") {
+    const start = String(url.searchParams.get("start") || "");
+    const end = String(url.searchParams.get("end") || "");
+    const startDate = start ? new Date(start) : new Date(Date.now() - 30 * 86400000);
+    const endDate = end ? new Date(end) : new Date();
+    const alerts = await prisma.alertLog.findMany({
+      where: { createdAt: { gte: startDate, lte: endDate } },
+      include: { acknowledgedByUser: true, inventory: true },
+      orderBy: { createdAt: "desc" },
+    });
+    rows = alerts.map((alert: any) => {
+      const responseTime = alert.acknowledgedAt && alert.createdAt 
+        ? Math.round((new Date(alert.acknowledgedAt).getTime() - new Date(alert.createdAt).getTime()) / (1000 * 60)) 
+        : null;
+      return {
+        date: alert.createdAt.toISOString().slice(0, 10),
+        alertType: alert.alertType,
+        priority: alert.priorityLevel,
+        itemName: alert.inventory.itemName,
+        warehouse: alert.inventory.warehouseName,
+        acknowledged: alert.acknowledged ? 'Yes' : 'No',
+        acknowledgedBy: alert.acknowledgedByUser?.username || '',
+        responseTimeMinutes: responseTime || '',
+        message: alert.message
+      };
+    });
+    headers = ["date", "alertType", "priority", "itemName", "warehouse", "acknowledged", "acknowledgedBy", "responseTimeMinutes", "message"];
+    filenameBase = `alert_response_${startDate.toISOString().slice(0,10)}_${endDate.toISOString().slice(0,10)}`;
+  } else if (type === "system_usage") {
+    const start = String(url.searchParams.get("start") || "");
+    const end = String(url.searchParams.get("end") || "");
+    const startDate = start ? new Date(start) : new Date(Date.now() - 30 * 86400000);
+    const endDate = end ? new Date(end) : new Date();
+    
+    // Get transaction statistics
+    const txStats: any[] = await prisma.$queryRaw`
+      SELECT 
+        transactionType,
+        COUNT(*) as count,
+        DATE_FORMAT(transactionDate, '%Y-%m-%d') as date
+      FROM StockTransaction 
+      WHERE transactionDate >= ${startDate} AND transactionDate <= ${endDate}
+      GROUP BY transactionType, DATE_FORMAT(transactionDate, '%Y-%m-%d')
+      ORDER BY date DESC, transactionType
+    `;
+    
+    // Get import statistics
+    const importStats: any[] = await prisma.$queryRaw`
+      SELECT 
+        importType,
+        COUNT(*) as count,
+        SUM(totalRecords) as totalRecords,
+        SUM(successRecords) as successRecords,
+        DATE_FORMAT(createdAt, '%Y-%m-%d') as date
+      FROM ImportHistory 
+      WHERE createdAt >= ${startDate} AND createdAt <= ${endDate}
+      GROUP BY importType, DATE_FORMAT(createdAt, '%Y-%m-%d')
+      ORDER BY date DESC, importType
+    `;
+    
+    // Get user login statistics
+    const userStats: any[] = await prisma.$queryRaw`
+      SELECT 
+        COUNT(DISTINCT username) as activeUsers,
+        COUNT(*) as totalLogins,
+        DATE_FORMAT(lastLogin, '%Y-%m-%d') as date
+      FROM User 
+      WHERE lastLogin >= ${startDate} AND lastLogin <= ${endDate}
+      GROUP BY DATE_FORMAT(lastLogin, '%Y-%m-%d')
+      ORDER BY date DESC
+    `;
+    
+    // Combine all statistics
+    rows = [
+      ...txStats.map((stat: any) => ({
+        date: stat.date,
+        feature: `Transaction: ${stat.transactionType}`,
+        usage_count: stat.count,
+        additional_info: ''
+      })),
+      ...importStats.map((stat: any) => ({
+        date: stat.date,
+        feature: `Import: ${stat.importType}`,
+        usage_count: stat.count,
+        additional_info: `${stat.totalRecords} records, ${stat.successRecords} successful`
+      })),
+      ...userStats.map((stat: any) => ({
+        date: stat.date,
+        feature: 'User Logins',
+        usage_count: stat.totalLogins,
+        additional_info: `${stat.activeUsers} unique users`
+      }))
+    ];
+    
+    headers = ["date", "feature", "usage_count", "additional_info"];
+    filenameBase = `system_usage_${startDate.toISOString().slice(0,10)}_${endDate.toISOString().slice(0,10)}`;
   } else {
     return NextResponse.json({ error: "Unsupported report type" }, { status: 400 });
   }

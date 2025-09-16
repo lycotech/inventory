@@ -91,14 +91,20 @@ export default function StockAgingPage() {
             <span>Warehouse</span>
             <select className="border rounded-md px-2 py-1 text-sm" value={warehouse} onChange={(e) => { setWarehouse(e.target.value); setPage(1); load({ page: 1, warehouse: e.target.value }); }}>
               <option value="">All</option>
-              {warehouses.map((w) => <option key={w} value={w}>{w}</option>)}
+              {warehouses.map((w, index) => {
+                const warehouse = typeof w === 'string' ? w : String(w);
+                return <option key={`aging-warehouse-${index}-${warehouse}`} value={warehouse}>{warehouse}</option>;
+              })}
             </select>
           </div>
           <div className="flex items-center gap-2 text-sm">
             <span>Category</span>
             <select className="border rounded-md px-2 py-1 text-sm" value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); load({ page: 1, category: e.target.value }); }}>
               <option value="">All</option>
-              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              {categories.map((c, index) => {
+                const category = typeof c === 'string' ? c : String(c);
+                return <option key={`aging-category-${index}-${category}`} value={category}>{category}</option>;
+              })}
             </select>
           </div>
           <div className="flex items-center gap-2 text-sm">

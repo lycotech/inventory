@@ -4,7 +4,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const TEMPLATES: Record<string, string> = {
-  full: "barcode,category,itemName,searchCode,warehouseName,stockQty,stockAlertLevel,expireDate,expireDateAlert\nYOUR_BARCODE,Your Category,Your Item Name,SEARCH_CODE,Your Warehouse,10,5,2025-12-31,30\n",
+  full: "barcode,category,itemName,searchCode,warehouseName,stockQty,stockAlertLevel,expireDate,expireDateAlert,batchNumber,manufactureDate,supplierInfo,lotNumber,costPerUnit\nYOUR_BARCODE,Your Category,Your Item Name,SEARCH_CODE,Your Warehouse,10,5,2025-12-31,30,BATCH001,2025-01-01,Supplier Name,LOT001,10.50\n",
+  batch_import: "barcode,warehouseName,batchNumber,quantityReceived,manufactureDate,expiryDate,expireDateAlert,supplierInfo,lotNumber,costPerUnit,notes\nYOUR_BARCODE,Your Warehouse,BATCH001,50,2025-01-01,2025-12-31,30,Supplier Name,LOT001,15.75,Batch imported from template\n",
   stock_receive: "barcode,warehouseName,quantity,referenceDoc,reason\nYOUR_BARCODE,Your Central Warehouse,10,GRN-001,Stock receiving\n",
   stock_transfer: "barcode,fromWarehouse,toWarehouse,quantity,referenceDoc,reason\nYOUR_BARCODE,Your Central Warehouse,Your Branch Warehouse,5,TRF-001,Stock transfer between warehouses\n",
   stock_alert: "barcode,warehouseName,stockAlertLevel\nYOUR_BARCODE,Your Warehouse,10\nANOTHER_BARCODE,Your Warehouse,5\n",

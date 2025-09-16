@@ -9,12 +9,16 @@ export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const rows = await prisma.inventory.findMany({
-    distinct: ["warehouseName"],
-    select: { warehouseName: true },
+  const warehouses = await prisma.warehouse.findMany({
+    where: { isActive: true },
+    select: { 
+      id: true, 
+      warehouseName: true,
+      warehouseCode: true,
+      location: true 
+    },
     orderBy: { warehouseName: "asc" },
-    take: 200,
   });
-  const warehouses = rows.map((r: { warehouseName: string }) => r.warehouseName).filter(Boolean);
+  
   return NextResponse.json({ warehouses });
 }

@@ -25,15 +25,31 @@ export async function GET() {
   `)[0];
   const lowStock = Number(lowStockRow?.c ?? 0);
 
-  // expiring soon: respect per-item expireDateAlert (days)
-  const expiringSoonRow = (await prisma.$queryRaw<{ c: bigint }[]>`
+  // expiring soon: Check both inventory items and batches
+  // First check inventory table for items with expiry dates
+  const expiringSoonInventoryRow = (await prisma.$queryRaw<{ c: bigint }[]>`
     SELECT COUNT(*) AS c
     FROM Inventory
     WHERE expireDate IS NOT NULL
       AND expireDateAlert > 0
       AND DATEDIFF(expireDate, NOW()) <= expireDateAlert
   `)[0];
-  const expiringSoon = Number(expiringSoonRow?.c ?? 0);
+  const expiringSoonInventory = Number(expiringSoonInventoryRow?.c ?? 0);
+
+  // Check batches for expiring items (this is the main source now)
+  const expiringSoonBatchesRow = (await prisma.$queryRaw<{ c: bigint }[]>`
+    SELECT COUNT(*) AS c
+    FROM Batch
+    WHERE expiryDate IS NOT NULL
+      AND expireDateAlert > 0
+      AND DATEDIFF(expiryDate, NOW()) <= expireDateAlert
+      AND isActive = 1
+      AND quantityRemaining > 0
+  `)[0];
+  const expiringSoonBatches = Number(expiringSoonBatchesRow?.c ?? 0);
+
+  // Combine both sources
+  const expiringSoon = expiringSoonInventory + expiringSoonBatches;
 
   return NextResponse.json({
     items,

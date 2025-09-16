@@ -267,7 +267,15 @@ function AlertCard({ alert }: { alert: any }) {
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="min-w-0 flex-1">
           <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">{alert.inventory.itemName}</div>
-          <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{alert.inventory.warehouse}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {alert.inventory.warehouse}
+            {alert.batchNumber && (
+              <>
+                <span className="mx-1">•</span>
+                <span className="font-medium">Batch: {alert.batchNumber}</span>
+              </>
+            )}
+          </div>
         </div>
         <span className={`text-xs rounded-full px-3 py-1.5 font-medium ${config.bg} ${config.text} shadow-sm flex-shrink-0`}>
           {alert.priority.toUpperCase()}
@@ -276,17 +284,29 @@ function AlertCard({ alert }: { alert: any }) {
       
       <div className="mb-4">
         <p className="text-sm text-gray-700 dark:text-gray-300">{alert.message}</p>
+        {alert.expiryDate && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Expiry: {new Date(alert.expiryDate).toLocaleDateString()}
+            {alert.daysUntilExpiry !== undefined && (
+              <span className="ml-2">
+                ({alert.daysUntilExpiry <= 0 ? 'Expired' : `${alert.daysUntilExpiry} day${alert.daysUntilExpiry !== 1 ? 's' : ''} remaining`})
+              </span>
+            )}
+          </p>
+        )}
       </div>
       
       <div className="flex items-center justify-between">
         <div className="text-xs text-gray-500 dark:text-gray-400">
           {new Date(alert.createdAt).toLocaleString()}
         </div>
-        <form action={`/api/alerts/${alert.id}/acknowledge`} method="post">
-          <button className="text-xs font-medium rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200 text-gray-700 dark:text-gray-300">
-            Acknowledge
-          </button>
-        </form>
+        {alert.source !== 'batch_expiry' && (
+          <form action={`/api/alerts/${alert.id}/acknowledge`} method="post">
+            <button className="text-xs font-medium rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200 text-gray-700 dark:text-gray-300">
+              Acknowledge
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

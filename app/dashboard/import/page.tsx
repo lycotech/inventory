@@ -100,6 +100,7 @@ function ImportContent() {
                 className="w-full h-11 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 px-3 text-sm focus:border-blue-500 focus:ring-blue-500 dark:text-gray-100"
               >
                 <option value="full">Full inventory</option>
+                <option value="batch_import">Batch import</option>
                 <option value="stock_receive">Stock receive</option>
                 <option value="stock_transfer">Stock transfer</option>
                 <option value="stock_out">Stock out (sales/consumption)</option>
@@ -110,6 +111,7 @@ function ImportContent() {
                 <p className="text-xs text-blue-700 dark:text-blue-300 font-medium mb-2">📥 Download CSV Templates:</p>
                 <div className="flex flex-wrap gap-2">
                   <a className="text-xs bg-blue-100 dark:bg-blue-800/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors" href={templateUrl("full")}>full</a>
+                  <a className="text-xs bg-green-100 dark:bg-green-800/50 text-green-700 dark:text-green-300 px-2 py-1 rounded-md hover:bg-green-200 dark:hover:bg-green-800 transition-colors" href={templateUrl("batch_import")}>batch_import</a>
                   <a className="text-xs bg-blue-100 dark:bg-blue-800/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors" href={templateUrl("stock_receive")}>stock_receive</a>
                   <a className="text-xs bg-blue-100 dark:bg-blue-800/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors" href={templateUrl("stock_transfer")}>stock_transfer</a>
                   <a className="text-xs bg-blue-100 dark:bg-blue-800/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors" href={templateUrl("stock_out")}>stock_out</a>

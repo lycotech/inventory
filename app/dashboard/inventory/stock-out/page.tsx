@@ -157,11 +157,14 @@ function StockOutCard() {
               required
             >
               <option value="">Select warehouse</option>
-              {warehouses.map((wh) => (
-                <option key={wh} value={wh}>
-                  {wh}
-                </option>
-              ))}
+              {warehouses.map((wh, index) => {
+                const warehouse = typeof wh === 'string' ? wh : String(wh);
+                return (
+                  <option key={`stock-out-warehouse-${index}-${warehouse}`} value={warehouse}>
+                    {warehouse}
+                  </option>
+                );
+              })}
             </select>
           </div>
 

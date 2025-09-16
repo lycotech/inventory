@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Package, AlertTriangle, Clock, Warehouse, TrendingUp, TrendingDown } from "lucide-react";
+import BatchExpiryAlerts from "@/components/dashboard/batch-expiry-alerts";
 
 interface DashboardStats {
   totalItems: number;
@@ -249,6 +250,11 @@ export default function DashboardClient() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Batch Expiry Alerts */}
+      <div className="grid grid-cols-1">
+        <BatchExpiryAlerts />
       </div>
 
       {/* Bottom Row - Recent Activity and Alerts */}

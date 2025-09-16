@@ -74,7 +74,7 @@ function ManageStockContent() {
 function ReceiveCard() {
   const [barcode, setBarcode] = useState("");
   const [warehouseName, setWarehouseName] = useState("");
-  const [warehouses, setWarehouses] = useState<string[]>([]);
+  const [warehouses, setWarehouses] = useState<{id: number; warehouseName: string; warehouseCode: string; location?: string}[]>([]);
   const [found, setFound] = useState<{ itemName: string; qty: number } | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
@@ -83,6 +83,16 @@ function ReceiveCard() {
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  
+  // Batch tracking fields
+  const [enableBatchTracking, setEnableBatchTracking] = useState(false);
+  const [batchNumber, setBatchNumber] = useState("");
+  const [manufactureDate, setManufactureDate] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [supplierInfo, setSupplierInfo] = useState("");
+  const [lotNumber, setLotNumber] = useState("");
+  const [costPerUnit, setCostPerUnit] = useState("");
+  const [notes, setNotes] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -125,17 +135,64 @@ function ReceiveCard() {
     e.preventDefault();
     setMsg(null);
   if (!barcode || !warehouseName || !qty) return;
+    
+    // Validate batch tracking fields if enabled
+    if (enableBatchTracking) {
+      if (!batchNumber) {
+        setMsg("Batch number is required when batch tracking is enabled");
+        return;
+      }
+      if (!expiryDate) {
+        setMsg("Expiry date is required when batch tracking is enabled");
+        return;
+      }
+    }
+    
     try {
       setLoading(true);
-      const res = await fetch("/api/inventory/receive", {
+      const endpoint = enableBatchTracking ? "/api/inventory/receive-batch" : "/api/inventory/receive";
+      
+      const requestBody: any = { 
+        barcode, 
+        warehouseName, 
+        quantity: Number(qty), 
+        referenceDoc: ref || undefined, 
+        reason: reason || undefined 
+      };
+      
+      if (enableBatchTracking) {
+        requestBody.enableBatchTracking = true;
+        requestBody.batchNumber = batchNumber;
+        requestBody.expiryDate = expiryDate;
+        if (manufactureDate) requestBody.manufactureDate = manufactureDate;
+        if (supplierInfo) requestBody.supplierInfo = supplierInfo;
+        if (lotNumber) requestBody.lotNumber = lotNumber;
+        if (costPerUnit) requestBody.costPerUnit = parseFloat(costPerUnit);
+        if (notes) requestBody.notes = notes;
+      }
+      
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
-    body: JSON.stringify({ barcode, warehouseName, quantity: Number(qty), referenceDoc: ref || undefined, reason: reason || undefined }),
+        body: JSON.stringify(requestBody),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to receive");
-      setMsg("Received successfully");
+      
+      setMsg(json.message || "Received successfully");
       setQty("");
+      
+      // Reset batch fields if enabled
+      if (enableBatchTracking) {
+        setBatchNumber("");
+        setManufactureDate("");
+        setExpiryDate("");
+        setSupplierInfo("");
+        setLotNumber("");
+        setCostPerUnit("");
+        setNotes("");
+      }
+      
       // Optionally trigger history reload via a custom event
       window.dispatchEvent(new CustomEvent("inventory:changed"));
     } catch (e: any) {
@@ -193,7 +250,11 @@ function ReceiveCard() {
               className="w-full h-11 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 px-3 text-sm focus:border-emerald-500 focus:ring-emerald-500 dark:text-gray-100"
             >
               <option value="">Select a warehouse</option>
-              {warehouses.map((w) => <option key={w} value={w}>{w}</option>)}
+              {warehouses.map((warehouse, index) => (
+                <option key={`inv-warehouse-1-${warehouse.id || index}`} value={warehouse.warehouseName}>
+                  {warehouse.warehouseName}
+                </option>
+              ))}
             </select>
           ) : (
             <Input 
@@ -237,10 +298,101 @@ function ReceiveCard() {
           />
         </div>
         
+        {/* Batch Tracking Toggle */}
+        <div className="flex items-center space-x-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <input
+            type="checkbox"
+            id="enableBatchTracking"
+            checked={enableBatchTracking}
+            onChange={(e) => setEnableBatchTracking(e.target.checked)}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+          <label htmlFor="enableBatchTracking" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Enable Batch Tracking with Expiry Dates
+          </label>
+        </div>
+        
+        {/* Batch Fields */}
+        {enableBatchTracking && (
+          <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-3">Batch Information</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Batch Number*</label>
+                <Input 
+                  value={batchNumber} 
+                  onChange={(e) => setBatchNumber(e.target.value)} 
+                  placeholder="e.g. BATCH001"
+                  className="h-10 bg-white dark:bg-gray-700/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Expiry Date*</label>
+                <Input 
+                  type="date"
+                  value={expiryDate} 
+                  onChange={(e) => setExpiryDate(e.target.value)} 
+                  className="h-10 bg-white dark:bg-gray-700/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Manufacture Date</label>
+                <Input 
+                  type="date"
+                  value={manufactureDate} 
+                  onChange={(e) => setManufactureDate(e.target.value)} 
+                  className="h-10 bg-white dark:bg-gray-700/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Lot Number</label>
+                <Input 
+                  value={lotNumber} 
+                  onChange={(e) => setLotNumber(e.target.value)} 
+                  placeholder="Lot identifier"
+                  className="h-10 bg-white dark:bg-gray-700/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Supplier Info</label>
+                <Input 
+                  value={supplierInfo} 
+                  onChange={(e) => setSupplierInfo(e.target.value)} 
+                  placeholder="Supplier name or info"
+                  className="h-10 bg-white dark:bg-gray-700/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Cost Per Unit</label>
+                <Input 
+                  type="number"
+                  step="0.01"
+                  value={costPerUnit} 
+                  onChange={(e) => setCostPerUnit(e.target.value)} 
+                  placeholder="0.00"
+                  className="h-10 bg-white dark:bg-gray-700/50"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
+              <textarea
+                value={notes} 
+                onChange={(e) => setNotes(e.target.value)} 
+                placeholder="Additional notes or comments"
+                className="w-full p-2 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 dark:text-gray-100"
+                rows={3}
+              />
+            </div>
+          </div>
+        )}
+        
         <div className="flex items-center justify-between pt-2">
           <Button 
             type="submit" 
-            disabled={!barcode || !warehouseName || !qty || loading}
+            disabled={!barcode || !warehouseName || !qty || loading || (enableBatchTracking && (!batchNumber || !expiryDate))}
             className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white shadow-lg shadow-emerald-500/25 disabled:opacity-50 disabled:cursor-not-allowed h-11 px-6"
           >
             {loading ? (
@@ -249,7 +401,7 @@ function ReceiveCard() {
                 Processing...
               </div>
             ) : (
-              "Receive Stock"
+              enableBatchTracking ? "Receive with Batch" : "Receive Stock"
             )}
           </Button>
           {msg && (
@@ -267,7 +419,7 @@ function TransferCard() {
   const [barcode, setBarcode] = useState("");
   const [fromWarehouseName, setFromWarehouseName] = useState("");
   const [toWarehouseName, setToWarehouseName] = useState("");
-  const [warehouses, setWarehouses] = useState<string[]>([]);
+  const [warehouses, setWarehouses] = useState<{id: number; warehouseName: string; warehouseCode: string; location?: string}[]>([]);
   const [found, setFound] = useState<{ itemName: string; qty: number } | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
@@ -392,7 +544,11 @@ function TransferCard() {
               className="w-full h-11 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 px-3 text-sm focus:border-green-500 focus:ring-green-500 dark:text-gray-100"
             >
               <option value="">Select source warehouse</option>
-              {warehouses.map((w) => <option key={w} value={w}>{w}</option>)}
+              {warehouses.map((warehouse, index) => (
+                <option key={`inv-warehouse-2-${warehouse.id || index}`} value={warehouse.warehouseName}>
+                  {warehouse.warehouseName}
+                </option>
+              ))}
             </select>
           ) : (
             <Input 
@@ -413,7 +569,11 @@ function TransferCard() {
               className="w-full h-11 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 px-3 text-sm focus:border-green-500 focus:ring-green-500 dark:text-gray-100"
             >
               <option value="">Select destination warehouse</option>
-              {warehouses.map((w) => <option key={w} value={w}>{w}</option>)}
+              {warehouses.map((warehouse, index) => (
+                <option key={`inv-warehouse-3-${warehouse.id || index}`} value={warehouse.warehouseName}>
+                  {warehouse.warehouseName}
+                </option>
+              ))}
             </select>
           ) : (
             <Input 

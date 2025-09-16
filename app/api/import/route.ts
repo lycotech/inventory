@@ -70,6 +70,11 @@ export async function POST(req: Request) {
     if (missing.length) {
       return NextResponse.json({ ok: false, error: `Missing required column(s): ${missing.join(", ")}. Please download the latest 'full' template.` }, { status: 400 });
     }
+  } else if (importType === "batch_import") {
+    const missing = requireCols(["barcode", "warehouseName", "batchNumber", "quantityReceived", "expiryDate"]);
+    if (missing.length) {
+      return NextResponse.json({ ok: false, error: `Missing required column(s): ${missing.join(", ")}. Please download the latest 'batch_import' template.` }, { status: 400 });
+    }
   } else if (importType === "stock_receive" || importType === "stock_issue" || importType === "adjustment" || importType === "stock_out") {
     const missing = requireCols(["barcode", "warehouseName", "quantity"]);
     if (missing.length) {
@@ -95,7 +100,7 @@ export async function POST(req: Request) {
       importStatus: "pending",
       processedBy: session.user.id,
     },
-  }).catch((dbError) => {
+  }).catch((dbError: any) => {
     console.error("Database error creating import history:", dbError);
     throw new Error(`Failed to create import record: ${dbError.message}`);
   });
@@ -157,6 +162,7 @@ export async function POST(req: Request) {
         if (!barcode) throw new Error("barcode is required");
         const warehouseName = String(getVal(row, "warehouseName") || "").trim();
         if (!warehouseName) throw new Error("warehouseName is required");
+        
         const data = {
           category: String(getVal(row, "category") || "").trim(),
           itemName: String(getVal(row, "itemName") || "").trim(),
@@ -168,11 +174,121 @@ export async function POST(req: Request) {
           expireDateAlert: toInt(getVal(row, "expireDateAlert"), 0),
           createdBy: session.user.id,
         };
-        await prisma.inventory.upsert({
+        
+        const inventoryRecord = await prisma.inventory.upsert({
           where: { barcode_warehouse: { barcode, warehouseName } },
           create: { barcode, ...data },
           update: { ...data },
         });
+
+        // Create batch record if batch-related fields are provided
+        const batchNumber = String(getVal(row, "batchNumber") || "").trim();
+        const manufactureDate = parseExpireDate(getVal(row, "manufactureDate"));
+        const supplierInfo = String(getVal(row, "supplierInfo") || "").trim();
+        const lotNumber = String(getVal(row, "lotNumber") || "").trim();
+        const costPerUnit = parseFloat(String(getVal(row, "costPerUnit") || "0"));
+        
+        if (batchNumber && data.expireDate) {
+          // Find the warehouse ID
+          const warehouse = await prisma.warehouse.findFirst({
+            where: { warehouseName: warehouseName }
+          });
+          
+          if (warehouse) {
+            // Check if batch already exists
+            const existingBatch = await prisma.batch.findFirst({
+              where: {
+                batchNumber: batchNumber,
+                inventoryId: inventoryRecord.id,
+                warehouseId: warehouse.id
+              }
+            });
+            
+            if (!existingBatch) {
+              await prisma.batch.create({
+                data: {
+                  batchNumber: batchNumber,
+                  inventoryId: inventoryRecord.id,
+                  warehouseId: warehouse.id,
+                  quantityReceived: data.stockQty,
+                  quantityRemaining: data.stockQty,
+                  manufactureDate: manufactureDate,
+                  expiryDate: data.expireDate,
+                  expireDateAlert: data.expireDateAlert || 30,
+                  supplierInfo: supplierInfo || null,
+                  lotNumber: lotNumber || null,
+                  costPerUnit: costPerUnit > 0 ? costPerUnit : null,
+                  notes: `Imported from full template on ${new Date().toISOString().split('T')[0]}`,
+                  createdBy: session.user.id,
+                }
+              });
+            }
+          }
+        }
+        
+        successful++;
+      } else if (importType === "batch_import") {
+        // Batch-specific import
+        const barcode = String(getVal(row, "barcode") || "").trim();
+        const warehouseName = String(getVal(row, "warehouseName") || "").trim();
+        const batchNumber = String(getVal(row, "batchNumber") || "").trim();
+        const quantityReceived = toInt(getVal(row, "quantityReceived"));
+        const expiryDate = parseExpireDate(getVal(row, "expiryDate"));
+        
+        if (!barcode) throw new Error("barcode is required");
+        if (!warehouseName) throw new Error("warehouseName is required");
+        if (!batchNumber) throw new Error("batchNumber is required");
+        if (!quantityReceived || quantityReceived <= 0) throw new Error("quantityReceived is required and must be > 0");
+        if (!expiryDate) throw new Error("expiryDate is required");
+        
+        // Find inventory item
+        const inventory = await prisma.inventory.findUnique({
+          where: { barcode_warehouse: { barcode, warehouseName } }
+        });
+        if (!inventory) throw new Error(`inventory not found for barcode "${barcode}" in warehouse "${warehouseName}". Please ensure the item exists in inventory first.`);
+        
+        // Find warehouse
+        const warehouse = await prisma.warehouse.findFirst({
+          where: { warehouseName: warehouseName }
+        });
+        if (!warehouse) throw new Error(`warehouse "${warehouseName}" not found`);
+        
+        // Check if batch already exists
+        const existingBatch = await prisma.batch.findFirst({
+          where: {
+            batchNumber: batchNumber,
+            inventoryId: inventory.id,
+            warehouseId: warehouse.id
+          }
+        });
+        
+        if (existingBatch) throw new Error(`batch "${batchNumber}" already exists for this item in this warehouse`);
+        
+        // Create batch record
+        await prisma.batch.create({
+          data: {
+            batchNumber: batchNumber,
+            inventoryId: inventory.id,
+            warehouseId: warehouse.id,
+            quantityReceived: quantityReceived,
+            quantityRemaining: quantityReceived,
+            manufactureDate: parseExpireDate(getVal(row, "manufactureDate")),
+            expiryDate: expiryDate,
+            expireDateAlert: toInt(getVal(row, "expireDateAlert"), 30),
+            supplierInfo: String(getVal(row, "supplierInfo") || "").trim() || null,
+            lotNumber: String(getVal(row, "lotNumber") || "").trim() || null,
+            costPerUnit: parseFloat(String(getVal(row, "costPerUnit") || "0")) || null,
+            notes: String(getVal(row, "notes") || "").trim() || `Batch imported on ${new Date().toISOString().split('T')[0]}`,
+            createdBy: session.user.id,
+          }
+        });
+        
+        // Update inventory stock quantity
+        await prisma.inventory.update({
+          where: { id: inventory.id },
+          data: { stockQty: { increment: quantityReceived } }
+        });
+        
         successful++;
       } else if (importType === "stock_receive" || importType === "stock_issue" || importType === "adjustment" || importType === "stock_out") {
         const barcode = String(getVal(row, "barcode") || "").trim();
