@@ -236,7 +236,7 @@ export async function GET(req: Request) {
     const endDate = end ? new Date(end) : new Date();
     const alerts = await prisma.alertLog.findMany({
       where: { createdAt: { gte: startDate, lte: endDate } },
-      include: { acknowledgedByUser: true, inventory: true },
+      include: { acknowledgedUser: true, inventory: true },
       orderBy: { createdAt: "desc" },
     });
     rows = alerts.map((alert: any) => {

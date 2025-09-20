@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getSession();
     if (!session?.user) {
@@ -16,7 +16,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: "Insufficient permissions. Only admins and managers can access import details." }, { status: 403 });
     }
 
-    const importId = parseInt(params.id);
+    const resolvedParams = await params;
+    const importId = parseInt(resolvedParams.id);
     if (isNaN(importId)) {
       return NextResponse.json({ error: "Invalid import ID" }, { status: 400 });
     }

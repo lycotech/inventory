@@ -27,12 +27,9 @@ export async function GET() {
   // Get live batch expiry alerts
   const expiringSoonBatches = await prisma.batch.findMany({
     where: {
-      AND: [
-        { expiryDate: { not: null } },
-        { expireDateAlert: { gt: 0 } },
-        { isActive: true },
-        { quantityRemaining: { gt: 0 } }
-      ]
+      expireDateAlert: { gt: 0 },
+      isActive: true,
+      quantityRemaining: { gt: 0 }
     },
     include: {
       inventory: true,

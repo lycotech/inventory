@@ -48,6 +48,15 @@ function ManageStockContent() {
         </div>
         <div className="flex items-center gap-3">
           <Button 
+            onClick={() => router.push('/dashboard/inventory/add')}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg shadow-green-500/25 h-11 px-6"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Add New Item
+          </Button>
+          <Button 
             onClick={handleManageStockItems}
             className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/25 h-11 px-6"
           >
@@ -60,13 +69,95 @@ function ManageStockContent() {
       </div>
 
       {/* Action Cards */}
-      <div className="grid md:grid-cols-2 gap-8">
+      <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-8">
+        <AddNewItemCard />
         <ReceiveCard />
         <TransferCard />
       </div>
 
       {/* History */}
       <HistoryCard />
+    </div>
+  );
+}
+
+function AddNewItemCard() {
+  const router = useRouter();
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
+      <div className="flex items-center mb-6">
+        <div className="p-3 bg-green-100 dark:bg-green-900 rounded-xl mr-4">
+          <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+        </div>
+        <div>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+            Add New Item
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">
+            Manually create new inventory items
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-4">
+          <div className="flex items-start">
+            <svg className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="text-sm text-green-800 dark:text-green-200 font-medium">
+                Create new inventory items manually
+              </p>
+              <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                Perfect for items not available through bulk import or immediate stock needs
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
+            </svg>
+            Barcode generation and validation
+          </div>
+          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
+            </svg>
+            Complete product information
+          </div>
+          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
+            </svg>
+            Automatic stock transaction creation
+          </div>
+          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
+            </svg>
+            Pricing and supplier information
+          </div>
+        </div>
+
+        <div>
+          <Button
+            onClick={() => router.push('/dashboard/inventory/add')}
+            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium py-3 px-4 rounded-lg shadow-lg shadow-green-500/25 transition-all duration-200"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Add New Item
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
