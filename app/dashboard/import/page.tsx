@@ -119,6 +119,18 @@ function ImportContent() {
                   <a className="text-xs bg-blue-100 dark:bg-blue-800/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors" href={templateUrl("adjustment")}>adjustment</a>
                 </div>
               </div>
+              
+              {type === "full" && (
+                <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg mt-3">
+                  <p className="text-xs text-amber-700 dark:text-amber-300 font-medium mb-2">📦 Unit System Support:</p>
+                  <div className="text-xs text-amber-600 dark:text-amber-400 space-y-1">
+                    <div><strong>unit:</strong> Display unit (piece, kilogram, carton, etc.)</div>
+                    <div><strong>baseUnit:</strong> Base conversion unit (defaults to same as unit)</div>
+                    <div><strong>conversionFactor:</strong> How many baseUnits = 1 unit (e.g., 1 kg = 1000 grams)</div>
+                    <div className="text-xs text-amber-500 dark:text-amber-400 mt-2">Examples: rice in kg/gram (1000), phones in carton/piece (12)</div>
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="space-y-2">

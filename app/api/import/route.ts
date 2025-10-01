@@ -170,6 +170,9 @@ export async function POST(req: Request) {
           warehouseName,
           stockQty: toInt(getVal(row, "stockQty"), 0),
           stockAlertLevel: toInt(getVal(row, "stockAlertLevel"), 0),
+          unit: String(getVal(row, "unit") || "piece").trim(),
+          baseUnit: String(getVal(row, "baseUnit") || getVal(row, "unit") || "piece").trim(),
+          conversionFactor: parseFloat(String(getVal(row, "conversionFactor") || "1")) || 1.0,
           expireDate: parseExpireDate(getVal(row, "expireDate")),
           expireDateAlert: toInt(getVal(row, "expireDateAlert"), 0),
           createdBy: session.user.id,
@@ -297,8 +300,32 @@ export async function POST(req: Request) {
         if (!barcode) throw new Error("barcode is required");
         if (!warehouseName) throw new Error("warehouseName is required");
         if (!qty) throw new Error("quantity is required");
-        const invId = await getInventoryId(barcode, warehouseName);
-        if (!invId) throw new Error(`inventory not found for ${barcode} in warehouse ${warehouseName}`);
+        
+        // Get full inventory item with unit information
+        const inventory = await prisma.inventory.findUnique({ 
+          where: { barcode_warehouse: { barcode, warehouseName } } 
+        });
+        if (!inventory) throw new Error(`inventory not found for ${barcode} in warehouse ${warehouseName}`);
+
+        // Handle unit conversion if import unit differs from inventory unit
+        let finalQty = qty;
+        const importUnit = String(getVal(row, "unit") || "").trim();
+        if (importUnit && importUnit !== inventory.unit) {
+          // Try to convert from import unit to inventory unit
+          try {
+            const { convertQuantity } = await import('@/lib/units');
+            finalQty = convertQuantity(qty, importUnit as any, inventory.unit as any);
+          } catch (error) {
+            // If conversion fails, use direct conversion factor if available
+            if (importUnit === inventory.baseUnit && inventory.conversionFactor) {
+              finalQty = Math.round(qty / Number(inventory.conversionFactor));
+            } else if (inventory.unit === inventory.baseUnit && inventory.conversionFactor) {
+              finalQty = Math.round(qty * Number(inventory.conversionFactor));
+            } else {
+              throw new Error(`Cannot convert from ${importUnit} to ${inventory.unit} for item ${barcode}. Please use ${inventory.unit} or provide valid conversion.`);
+            }
+          }
+        }
 
         const txType = importType === "stock_receive" ? "receive" : 
                       importType === "stock_issue" ? "issue" : 
@@ -306,9 +333,9 @@ export async function POST(req: Request) {
                       "adjustment";
         await prisma.stockTransaction.create({
           data: {
-            inventoryId: invId,
+            inventoryId: inventory.id,
             transactionType: txType as any,
-            quantity: qty,
+            quantity: finalQty,
             transactionDate: new Date(),
             referenceDoc: getVal(row, "referenceDoc") ? String(getVal(row, "referenceDoc")) : null,
             reason: getVal(row, "reason") ? String(getVal(row, "reason")) : null,
@@ -317,8 +344,8 @@ export async function POST(req: Request) {
         });
         // Adjust inventory stockQty accordingly
         await prisma.inventory.update({
-          where: { id: invId },
-          data: { stockQty: { increment: (txType === "issue" || txType === "stock_out") ? -Math.abs(qty) : Math.abs(qty) } },
+          where: { id: inventory.id },
+          data: { stockQty: { increment: (txType === "issue" || txType === "stock_out") ? -Math.abs(finalQty) : Math.abs(finalQty) } },
         });
         successful++;
       } else if (importType === "stock_alert") {

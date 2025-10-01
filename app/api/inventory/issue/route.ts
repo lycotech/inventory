@@ -16,10 +16,11 @@ export async function POST(req: Request) {
   }
   
   const body = await req.json().catch(() => ({}));
-  const { barcode, warehouseName, quantity, referenceDoc, reason } = body as {
+  const { barcode, warehouseName, quantity, inputUnit, referenceDoc, reason } = body as {
     barcode?: string;
     warehouseName?: string;
     quantity?: number;
+    inputUnit?: string;
     referenceDoc?: string;
     reason?: string;
   };
@@ -29,6 +30,26 @@ export async function POST(req: Request) {
   const inv = await prisma.inventory.findUnique({ where: { barcode_warehouse: { barcode, warehouseName } } });
   if (!inv) return NextResponse.json({ error: "Inventory not found" }, { status: 404 });
 
+  // Handle unit conversion if needed
+  let finalQuantity = Math.abs(quantity!);
+  if (inputUnit && inputUnit !== inv.unit) {
+    try {
+      const { convertQuantity } = await import('@/lib/units');
+      finalQuantity = convertQuantity(Math.abs(quantity!), inputUnit as any, inv.unit as any);
+    } catch (error) {
+      // Try using the item's conversion factor
+      if (inputUnit === inv.baseUnit && inv.conversionFactor) {
+        finalQuantity = Math.round(Math.abs(quantity!) / Number(inv.conversionFactor));
+      } else if (inv.unit === inv.baseUnit && inv.conversionFactor) {
+        finalQuantity = Math.round(Math.abs(quantity!) * Number(inv.conversionFactor));
+      } else {
+        return NextResponse.json({ 
+          error: `Cannot convert from ${inputUnit} to ${inv.unit}. Please use ${inv.unit} or provide valid conversion.` 
+        }, { status: 400 });
+      }
+    }
+  }
+
   // Read app setting: preventNegativeIssue (default true)
   let preventNegative = true;
   try {
@@ -36,15 +57,14 @@ export async function POST(req: Request) {
     if (s && typeof s.value === "boolean") preventNegative = s.value as boolean;
   } catch {}
 
-  const absQty = Math.abs(quantity!);
-  if (inv.stockQty - absQty < 0) {
+  if (inv.stockQty - finalQuantity < 0) {
     // Create a negative stock alert log regardless
     try {
       const created = await prisma.alertLog.create({
         data: {
           alertType: "negative_stock",
           priorityLevel: "high",
-          message: `Attempted to issue ${absQty} but only ${inv.stockQty} available for ${inv.itemName} (${inv.barcode}) at ${inv.warehouseName}`,
+          message: `Attempted to issue ${finalQuantity} ${inv.unit} but only ${inv.stockQty} ${inv.unit} available for ${inv.itemName} (${inv.barcode}) at ${inv.warehouseName}`,
           inventoryId: inv.id,
           acknowledged: false,
         },
@@ -75,7 +95,7 @@ export async function POST(req: Request) {
       data: {
         inventoryId: inv.id,
         transactionType: "issue",
-        quantity: absQty,
+        quantity: finalQuantity,
         transactionDate: new Date(),
         referenceDoc: referenceDoc || null,
         reason: reason || null,
@@ -84,7 +104,7 @@ export async function POST(req: Request) {
     });
     const updated = await db.inventory.update({
       where: { id: inv.id },
-      data: { stockQty: { decrement: absQty } },
+      data: { stockQty: { decrement: finalQuantity } },
     });
     // Low stock alert if we crossed threshold after issuing
     try {
@@ -116,5 +136,13 @@ export async function POST(req: Request) {
     return t;
   });
 
-  return NextResponse.json({ ok: true, id: tx.id });
+  const conversionMessage = inputUnit && inputUnit !== inv.unit 
+    ? ` (converted from ${quantity} ${inputUnit} to ${finalQuantity} ${inv.unit})`
+    : '';
+  
+  return NextResponse.json({ 
+    ok: true, 
+    id: tx.id, 
+    message: `Successfully issued ${finalQuantity} ${inv.unit}${conversionMessage}` 
+  });
 }

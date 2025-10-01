@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { getAllUnits, getUnitsByCategory, UNITS, formatQuantityWithUnit } from '@/lib/units';
 
 interface AddNewItemProps {
   onItemAdded?: (item: any) => void;
@@ -27,6 +28,9 @@ export default function AddNewItemForm({ onItemAdded, onClose }: AddNewItemProps
     warehouseName: '',
     stockQty: '',
     stockAlertLevel: '',
+    unit: 'piece', // Default unit
+    baseUnit: 'piece', // Default base unit
+    conversionFactor: '1', // Default conversion factor
     expireDate: '',
     expireDateAlert: '',
     // Batch fields (optional)
@@ -184,6 +188,9 @@ export default function AddNewItemForm({ onItemAdded, onClose }: AddNewItemProps
           warehouseName: '',
           stockQty: '',
           stockAlertLevel: '',
+          unit: 'piece',
+          baseUnit: 'piece',
+          conversionFactor: '1',
           expireDate: '',
           expireDateAlert: '',
           batchNumber: '',
@@ -363,15 +370,62 @@ export default function AddNewItemForm({ onItemAdded, onClose }: AddNewItemProps
 
             <div>
               <Label htmlFor="stockQty">Initial Stock Quantity</Label>
-              <Input
-                id="stockQty"
-                type="number"
-                min="0"
-                value={formData.stockQty}
-                onChange={(e) => handleInputChange('stockQty', e.target.value)}
-                placeholder="0"
-              />
+              <div className="flex space-x-2">
+                <Input
+                  id="stockQty"
+                  type="number"
+                  min="0"
+                  value={formData.stockQty}
+                  onChange={(e) => handleInputChange('stockQty', e.target.value)}
+                  placeholder="0"
+                  className="flex-1"
+                />
+                <select
+                  value={formData.unit}
+                  onChange={(e) => {
+                    const newUnit = e.target.value;
+                    const unitDef = UNITS[newUnit];
+                    handleInputChange('unit', newUnit);
+                    handleInputChange('baseUnit', unitDef?.baseUnit || newUnit);
+                    handleInputChange('conversionFactor', unitDef?.conversionFactor.toString() || '1');
+                  }}
+                  className="border border-gray-300 rounded px-3 py-2 min-w-[100px]"
+                >
+                  {getAllUnits().map(unit => (
+                    <option key={unit.id} value={unit.id}>
+                      {unit.name} ({unit.abbreviation})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {formData.unit !== 'piece' && UNITS[formData.unit] && (
+                  `1 ${UNITS[formData.unit].name} = ${formData.conversionFactor} ${UNITS[formData.baseUnit]?.name || formData.baseUnit}`
+                )}
+              </p>
             </div>
+
+            {/* Custom Conversion Factor for Count Units */}
+            {UNITS[formData.unit]?.category === 'count' && formData.unit !== 'piece' && (
+              <div>
+                <Label htmlFor="conversionFactor">
+                  Units per {UNITS[formData.unit]?.name} (Optional)
+                </Label>
+                <Input
+                  id="conversionFactor"
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  value={formData.conversionFactor}
+                  onChange={(e) => handleInputChange('conversionFactor', e.target.value)}
+                  placeholder={UNITS[formData.unit]?.conversionFactor.toString()}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  How many pieces are in one {UNITS[formData.unit]?.name.toLowerCase()}? 
+                  (Default: {UNITS[formData.unit]?.conversionFactor})
+                </p>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="stockAlertLevel">Stock Alert Level</Label>
@@ -510,6 +564,9 @@ export default function AddNewItemForm({ onItemAdded, onClose }: AddNewItemProps
                 warehouseName: '',
                 stockQty: '',
                 stockAlertLevel: '',
+                unit: 'piece',
+                baseUnit: 'piece',
+                conversionFactor: '1',
                 expireDate: '',
                 expireDateAlert: '',
                 batchNumber: '',

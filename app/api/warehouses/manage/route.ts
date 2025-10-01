@@ -145,3 +145,182 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Failed to create warehouse" }, { status: 500 });
   }
 }
+
+// Update warehouse
+export async function PATCH(req: Request) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  
+  // Role-based access control: only admin and manager can manage warehouses
+  if (session.user.role === "user") {
+    return NextResponse.json({ error: "Forbidden: Admin or Manager access required" }, { status: 403 });
+  }
+
+  const body = await req.json().catch(() => ({}));
+  const { 
+    id,
+    warehouseName, 
+    warehouseCode, 
+    location, 
+    contactPerson, 
+    phoneNumber, 
+    email, 
+    isCentralWarehouse,
+    isActive
+  } = body as {
+    id?: number;
+    warehouseName?: string;
+    warehouseCode?: string;
+    location?: string;
+    contactPerson?: string;
+    phoneNumber?: string;
+    email?: string;
+    isCentralWarehouse?: boolean;
+    isActive?: boolean;
+  };
+
+  if (!id) {
+    return NextResponse.json({ error: "Warehouse ID is required" }, { status: 400 });
+  }
+
+  if (!warehouseName || !warehouseCode) {
+    return NextResponse.json({ 
+      error: "warehouseName and warehouseCode are required" 
+    }, { status: 400 });
+  }
+
+  try {
+    // Check if warehouse exists
+    const existingWarehouse = await prisma.warehouse.findUnique({
+      where: { id }
+    });
+
+    if (!existingWarehouse) {
+      return NextResponse.json({ error: "Warehouse not found" }, { status: 404 });
+    }
+
+    // If this warehouse is being marked as central, ensure only one central warehouse exists
+    if (isCentralWarehouse && !existingWarehouse.isCentralWarehouse) {
+      await prisma.warehouse.updateMany({
+        where: { 
+          isCentralWarehouse: true,
+          id: { not: id }
+        },
+        data: { isCentralWarehouse: false },
+      });
+    }
+
+    // Check if the warehouse name is being changed and if it has inventory items
+    if (warehouseName !== existingWarehouse.warehouseName) {
+      const inventoryCount = await prisma.inventory.count({
+        where: { warehouseName: existingWarehouse.warehouseName }
+      });
+
+      if (inventoryCount > 0) {
+        // Update all inventory items to use the new warehouse name
+        await prisma.inventory.updateMany({
+          where: { warehouseName: existingWarehouse.warehouseName },
+          data: { warehouseName }
+        });
+      }
+    }
+
+    const warehouse = await prisma.warehouse.update({
+      where: { id },
+      data: {
+        warehouseName,
+        warehouseCode,
+        location: location || null,
+        contactPerson: contactPerson || null,
+        phoneNumber: phoneNumber || null,
+        email: email || null,
+        isCentralWarehouse: isCentralWarehouse || false,
+        isActive: isActive !== undefined ? isActive : existingWarehouse.isActive,
+      },
+    });
+
+    return NextResponse.json({ 
+      success: true, 
+      message: "Warehouse updated successfully",
+      warehouse 
+    });
+  } catch (error: any) {
+    console.error("Error updating warehouse:", error);
+    if (error.code === 'P2002') {
+      return NextResponse.json({ 
+        error: "Warehouse name or code already exists" 
+      }, { status: 409 });
+    }
+    return NextResponse.json({ error: "Failed to update warehouse" }, { status: 500 });
+  }
+}
+
+// Delete warehouse
+export async function DELETE(req: Request) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  
+  // Role-based access control: only admin and manager can manage warehouses
+  if (session.user.role === "user") {
+    return NextResponse.json({ error: "Forbidden: Admin or Manager access required" }, { status: 403 });
+  }
+
+  const url = new URL(req.url);
+  const id = parseInt(url.searchParams.get('id') || '0');
+
+  if (!id) {
+    return NextResponse.json({ error: "Warehouse ID is required" }, { status: 400 });
+  }
+
+  try {
+    // Check if warehouse exists
+    const existingWarehouse = await prisma.warehouse.findUnique({
+      where: { id }
+    });
+
+    if (!existingWarehouse) {
+      return NextResponse.json({ error: "Warehouse not found" }, { status: 404 });
+    }
+
+    // Check if warehouse has inventory items
+    const inventoryCount = await prisma.inventory.count({
+      where: { warehouseName: existingWarehouse.warehouseName }
+    });
+
+    if (inventoryCount > 0) {
+      return NextResponse.json({ 
+        error: `Cannot delete warehouse "${existingWarehouse.warehouseName}" because it has ${inventoryCount} inventory items. Please move or remove all items first.` 
+      }, { status: 400 });
+    }
+
+    // Check if it's the only central warehouse
+    if (existingWarehouse.isCentralWarehouse) {
+      const otherCentralWarehouses = await prisma.warehouse.count({
+        where: { 
+          isCentralWarehouse: true,
+          id: { not: id },
+          isActive: true
+        }
+      });
+
+      if (otherCentralWarehouses === 0) {
+        return NextResponse.json({ 
+          error: "Cannot delete the only central warehouse. Please designate another warehouse as central first." 
+        }, { status: 400 });
+      }
+    }
+
+    // Delete the warehouse
+    await prisma.warehouse.delete({
+      where: { id }
+    });
+
+    return NextResponse.json({ 
+      success: true, 
+      message: `Warehouse "${existingWarehouse.warehouseName}" deleted successfully` 
+    });
+  } catch (error: any) {
+    console.error("Error deleting warehouse:", error);
+    return NextResponse.json({ error: "Failed to delete warehouse" }, { status: 500 });
+  }
+}

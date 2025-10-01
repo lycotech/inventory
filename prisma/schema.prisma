@@ -74,6 +74,33 @@ enum ExecutionStatus {
   processing
 }
 
+enum UnitType {
+  // Weight units
+  gram
+  kilogram
+  pound
+  ounce
+  
+  // Volume units
+  milliliter
+  liter
+  gallon
+  
+  // Count units
+  piece
+  dozen
+  pack
+  carton
+  box
+  case
+  
+  // Length units
+  meter
+  centimeter
+  inch
+  foot
+}
+
 model User {
   id           Int       @id @default(autoincrement())
   username     String    @unique
@@ -116,6 +143,9 @@ model Inventory {
   warehouseName    String    @db.VarChar(100)
   stockQty         Int       @default(0)
   stockAlertLevel  Int       @default(0)
+  unit             String    @default("piece") @db.VarChar(20)
+  baseUnit         String    @default("piece") @db.VarChar(20)
+  conversionFactor Decimal   @default(1.0) @db.Decimal(10, 4)
   expireDate       DateTime?
   expireDateAlert  Int       @default(0)
   createdBy        Int

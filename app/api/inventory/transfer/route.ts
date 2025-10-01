@@ -21,6 +21,7 @@ export async function POST(req: Request) {
     fromWarehouse, 
     toWarehouse, 
     quantity, 
+    inputUnit,
     referenceDoc, 
     reason 
   } = body as {
@@ -28,6 +29,7 @@ export async function POST(req: Request) {
     fromWarehouse?: string;
     toWarehouse?: string;
     quantity?: number;
+    inputUnit?: string;
     referenceDoc?: string;
     reason?: string;
   };
@@ -57,9 +59,27 @@ export async function POST(req: Request) {
         throw new Error(`Item ${barcode} not found in ${fromWarehouse} warehouse`);
       }
 
-      // Check if sufficient stock available
-      if (sourceInv.stockQty < absQty) {
-        throw new Error(`Insufficient stock. Available: ${sourceInv.stockQty}, Requested: ${absQty}`);
+      // Handle unit conversion if needed
+      let finalQuantity = absQty;
+      if (inputUnit && inputUnit !== sourceInv.unit) {
+        try {
+          const { convertQuantity } = await import('@/lib/units');
+          finalQuantity = convertQuantity(absQty, inputUnit as any, sourceInv.unit as any);
+        } catch (error) {
+          // Try using the item's conversion factor
+          if (inputUnit === sourceInv.baseUnit && sourceInv.conversionFactor) {
+            finalQuantity = Math.round(absQty / Number(sourceInv.conversionFactor));
+          } else if (sourceInv.unit === sourceInv.baseUnit && sourceInv.conversionFactor) {
+            finalQuantity = Math.round(absQty * Number(sourceInv.conversionFactor));
+          } else {
+            throw new Error(`Cannot convert from ${inputUnit} to ${sourceInv.unit}. Please use ${sourceInv.unit} or provide valid conversion.`);
+          }
+        }
+      }
+
+      // Check if sufficient stock available (using converted quantity)
+      if (sourceInv.stockQty < finalQuantity) {
+        throw new Error(`Insufficient stock. Available: ${sourceInv.stockQty} ${sourceInv.unit}, Requested: ${finalQuantity} ${sourceInv.unit} (converted from ${absQty} ${inputUnit || sourceInv.unit})`);
       }
 
       // Find or create destination inventory
@@ -78,6 +98,9 @@ export async function POST(req: Request) {
             warehouseName: toWarehouse,
             stockQty: 0,
             stockAlertLevel: sourceInv.stockAlertLevel,
+            unit: sourceInv.unit,
+            baseUnit: sourceInv.baseUnit,
+            conversionFactor: sourceInv.conversionFactor,
             expireDate: sourceInv.expireDate,
             expireDateAlert: sourceInv.expireDateAlert,
             createdBy: session.user.id,
@@ -98,7 +121,7 @@ export async function POST(req: Request) {
         data: {
           inventoryId: sourceInv.id,
           transactionType: "transfer",
-          quantity: absQty,
+          quantity: finalQuantity,
           transactionDate: new Date(),
           referenceDoc: referenceDoc || null,
           reason: reason || `Transfer from ${fromWarehouse} to ${toWarehouse}`,
@@ -111,13 +134,13 @@ export async function POST(req: Request) {
       // Update source warehouse stock (decrease)
       const updatedSource = await db.inventory.update({
         where: { id: sourceInv.id },
-        data: { stockQty: { decrement: absQty } },
+        data: { stockQty: { decrement: finalQuantity } },
       });
 
       // Update destination warehouse stock (increase)
       const updatedDest = await db.inventory.update({
         where: { id: destInv.id },
-        data: { stockQty: { increment: absQty } },
+        data: { stockQty: { increment: finalQuantity } },
       });
 
       // Check for low stock alerts on source warehouse
@@ -170,9 +193,13 @@ export async function POST(req: Request) {
       };
     });
 
+    const conversionMessage = inputUnit && inputUnit !== result.sourceInventory.unit 
+      ? ` (converted from ${absQty} ${inputUnit} to ${result.transferTx.quantity} ${result.sourceInventory.unit})`
+      : '';
+
     return NextResponse.json({
       success: true,
-      message: `Successfully transferred ${absQty} units of ${result.sourceInventory.itemName} from ${fromWarehouse} to ${toWarehouse}`,
+      message: `Successfully transferred ${result.transferTx.quantity} ${result.sourceInventory.unit} of ${result.sourceInventory.itemName} from ${fromWarehouse} to ${toWarehouse}${conversionMessage}`,
       transaction: result.transferTx,
       sourceStock: result.sourceInventory.stockQty,
       destinationStock: result.destinationInventory.stockQty,

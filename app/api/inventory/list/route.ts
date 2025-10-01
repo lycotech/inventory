@@ -52,6 +52,9 @@ export async function GET(req: Request) {
     warehouse: it.warehouseName,
     qty: it.stockQty,
     alert: it.stockAlertLevel,
+    unit: it.unit,
+    baseUnit: it.baseUnit,
+    conversionFactor: it.conversionFactor,
     expireDate: it.expireDate,
   }));
 

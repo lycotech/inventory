@@ -1,0 +1,6 @@
+barcode,category,itemName,searchCode,warehouseName,stockQty,stockAlertLevel,unit,baseUnit,conversionFactor,expireDate,expireDateAlert,batchNumber,manufactureDate,supplierInfo,lotNumber,costPerUnit
+TEST001,Food,Rice Bag 25kg,RICE25KG,Central Warehouse,50,10,kilogram,gram,1000,2025-06-30,60,RICE_BATCH_001,2025-01-15,Rice Supplier Ltd,RICE_LOT_001,45.50
+TEST002,Electronics,Phone Chargers Pack,CHARGER12,Electronics Warehouse,20,5,carton,piece,12,2026-01-31,30,CHARGER_BATCH_001,2025-02-01,Electronics Corp,CHAR_LOT_001,180.00
+TEST003,Office,Printer Paper,PAPER500,Central Warehouse,100,25,pack,piece,500,2025-12-31,90,PAPER_BATCH_001,2025-01-01,Office Supplies Co,PAPER_LOT_001,25.75
+TEST004,Beverages,Water Bottles,WATER24,Central Warehouse,80,20,carton,piece,24,2025-09-15,30,WATER_BATCH_001,2025-02-10,Beverage Inc,WATER_LOT_001,12.50
+TEST005,Food,Cooking Oil,OIL5L,Central Warehouse,30,8,liter,milliliter,1000,2025-08-31,45,OIL_BATCH_001,2025-01-20,Oil Company,OIL_LOT_001,85.00

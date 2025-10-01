@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useSearchParams, useRouter } from "next/navigation";
+import { convertQuantity } from "@/lib/units";
 
 interface Row {
   id: number;
@@ -12,6 +13,9 @@ interface Row {
   warehouse: string;
   qty: number;
   alert: number;
+  unit?: string;
+  baseUnit?: string;
+  conversionFactor?: number;
   expireDate?: string | null;
 }
 
@@ -271,6 +275,32 @@ function RowView({ row }: { row: Row }) {
     return quantity.toLocaleString();
   };
 
+  const formatWithConversion = (quantity: number) => {
+    if (!mounted) return { main: "0", converted: null };
+    
+    const unit = row.unit || 'piece';
+    const baseUnit = row.baseUnit || 'piece';
+    const conversionFactor = row.conversionFactor || 1;
+    
+    const main = `${formatQuantity(quantity)} ${unit}`;
+    
+    if (unit !== baseUnit && conversionFactor !== 1) {
+      try {
+        const converted = convertQuantity(quantity, unit as any, baseUnit as any);
+        if (converted !== quantity) {
+          return { 
+            main, 
+            converted: `(${formatQuantity(converted)} ${baseUnit})`
+          };
+        }
+      } catch (error) {
+        // If conversion fails, just show the main quantity
+      }
+    }
+    
+    return { main, converted: null };
+  };
+
   const formatDate = (dateString: string) => {
     if (!mounted) return "Loading...";
     try {
@@ -354,8 +384,13 @@ function RowView({ row }: { row: Row }) {
         <div className="flex items-center gap-3 ml-4 flex-shrink-0">
           <div className="text-center">
             <div className="text-lg font-bold text-gray-900 dark:text-gray-100 tabular-nums">
-              {formatQuantity(row.qty)}
+              {formatWithConversion(row.qty).main}
             </div>
+            {formatWithConversion(row.qty).converted && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {formatWithConversion(row.qty).converted}
+              </div>
+            )}
             <div className="text-xs text-gray-500 dark:text-gray-400">Stock</div>
           </div>
           
@@ -393,8 +428,13 @@ function RowView({ row }: { row: Row }) {
                   onClick={() => setIsEditing(true)}
                   className="text-sm font-semibold tabular-nums text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 cursor-pointer"
                 >
-                  {formatQuantity(row.alert)}
+                  {formatWithConversion(row.alert).main}
                 </button>
+                {formatWithConversion(row.alert).converted && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {formatWithConversion(row.alert).converted}
+                  </div>
+                )}
                 <div className="text-xs text-gray-500 dark:text-gray-400">Alert Level</div>
               </div>
             )}

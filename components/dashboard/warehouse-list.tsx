@@ -14,6 +14,7 @@ interface Warehouse {
   isActive: boolean;
   createdAt: string;
   isVirtual?: boolean; // Added for inventory-only warehouses
+  itemCount?: number; // Number of inventory items in warehouse
 }
 
 interface NewWarehouse {
@@ -26,11 +27,20 @@ interface NewWarehouse {
   isCentralWarehouse: boolean;
 }
 
+interface EditWarehouse extends NewWarehouse {
+  id: number;
+  isActive: boolean;
+}
+
 export function WarehouseList() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [editingWarehouse, setEditingWarehouse] = useState<EditWarehouse | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Warehouse | null>(null);
   const [formData, setFormData] = useState<NewWarehouse>({
     warehouseName: '',
     warehouseCode: '',
@@ -129,6 +139,111 @@ export function WarehouseList() {
     });
     setShowCreateForm(true);
     setMessage({ type: 'success', text: `Creating warehouse record for "${warehouse.warehouseName}"` });
+  };
+
+  const handleEditWarehouse = (warehouse: Warehouse) => {
+    if (warehouse.isVirtual) {
+      setMessage({ type: 'error', text: 'Cannot edit virtual warehouses. Create a warehouse record first.' });
+      return;
+    }
+
+    setEditingWarehouse({
+      id: warehouse.id,
+      warehouseName: warehouse.warehouseName,
+      warehouseCode: warehouse.warehouseCode,
+      location: warehouse.location || '',
+      contactPerson: warehouse.contactPerson || '',
+      phoneNumber: warehouse.phoneNumber || '',
+      email: warehouse.email || '',
+      isCentralWarehouse: warehouse.isCentralWarehouse,
+      isActive: warehouse.isActive,
+    });
+    setShowCreateForm(false);
+    setMessage(null);
+  };
+
+  const handleUpdateWarehouse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingWarehouse) return;
+
+    setUpdating(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch('/api/warehouses/manage', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editingWarehouse),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage({ type: 'success', text: 'Warehouse updated successfully!' });
+        setEditingWarehouse(null);
+        fetchWarehouses(); // Refresh the list
+        
+        // Emit event to notify other components
+        window.dispatchEvent(new CustomEvent('warehouse:updated'));
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Failed to update warehouse' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to update warehouse' });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeleteWarehouse = async (warehouse: Warehouse) => {
+    if (warehouse.isVirtual) {
+      setMessage({ type: 'error', text: 'Cannot delete virtual warehouses. They exist only in inventory records.' });
+      return;
+    }
+
+    setConfirmDelete(warehouse);
+  };
+
+  const confirmDeleteWarehouse = async () => {
+    if (!confirmDelete) return;
+
+    setDeleting(confirmDelete.id);
+    setMessage(null);
+
+    try {
+      const response = await fetch(`/api/warehouses/manage?id=${confirmDelete.id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage({ type: 'success', text: data.message || 'Warehouse deleted successfully!' });
+        fetchWarehouses(); // Refresh the list
+        
+        // Emit event to notify other components
+        window.dispatchEvent(new CustomEvent('warehouse:deleted'));
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Failed to delete warehouse' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to delete warehouse' });
+    } finally {
+      setDeleting(null);
+      setConfirmDelete(null);
+    }
+  };
+
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!editingWarehouse) return;
+
+    const { name, value, type, checked } = e.target;
+    setEditingWarehouse(prev => prev ? {
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    } : null);
   };
 
   if (loading) {
@@ -313,6 +428,190 @@ export function WarehouseList() {
         </div>
       )}
 
+      {/* Edit Warehouse Form */}
+      {editingWarehouse && (
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border-2 border-dashed border-gray-300 dark:border-gray-600">
+          <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Edit Warehouse</h4>
+          <form onSubmit={handleUpdateWarehouse} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Warehouse Name *
+                </label>
+                <input
+                  type="text"
+                  name="warehouseName"
+                  required
+                  value={editingWarehouse.warehouseName}
+                  onChange={handleEditInputChange}
+                  placeholder="e.g., Central Warehouse"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Warehouse Code *
+                </label>
+                <input
+                  type="text"
+                  name="warehouseCode"
+                  required
+                  value={editingWarehouse.warehouseCode}
+                  onChange={handleEditInputChange}
+                  placeholder="e.g., CW01"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Location
+              </label>
+              <input
+                type="text"
+                name="location"
+                value={editingWarehouse.location}
+                onChange={handleEditInputChange}
+                placeholder="e.g., 123 Main Street, City, State"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Contact Person
+                </label>
+                <input
+                  type="text"
+                  name="contactPerson"
+                  value={editingWarehouse.contactPerson}
+                  onChange={handleEditInputChange}
+                  placeholder="e.g., John Doe"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  name="phoneNumber"
+                  value={editingWarehouse.phoneNumber}
+                  onChange={handleEditInputChange}
+                  placeholder="e.g., +1234567890"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Email
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={editingWarehouse.email}
+                onChange={handleEditInputChange}
+                placeholder="e.g., warehouse@company.com"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              />
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                name="isCentralWarehouse"
+                checked={editingWarehouse.isCentralWarehouse}
+                onChange={handleEditInputChange}
+                className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+              />
+              <label className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                Set as Central Warehouse (main distribution center)
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                name="isActive"
+                checked={editingWarehouse.isActive}
+                onChange={handleEditInputChange}
+                className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+              />
+              <label className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                Active warehouse
+              </label>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingWarehouse(null);
+                  setMessage(null);
+                }}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={updating}
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-colors"
+              >
+                {updating ? 'Updating...' : 'Update Warehouse'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900/50 rounded-full mb-4">
+              <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.864-.833-2.634 0L3.268 19c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 text-center mb-2">
+              Delete Warehouse
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
+              Are you sure you want to delete "{confirmDelete.warehouseName}"? This action cannot be undone.
+            </p>
+            {(confirmDelete.itemCount ?? 0) > 0 && (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-md p-3 mb-4">
+                <div className="flex">
+                  <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <div className="ml-3">
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                      This warehouse contains {confirmDelete.itemCount} inventory items. Delete operation is not allowed.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteWarehouse}
+                disabled={(confirmDelete.itemCount ?? 0) > 0 || confirmDelete.isCentralWarehouse}
+                className="flex-1 px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Warehouse List */}
       <div className="space-y-3">
         {warehouses.length === 0 ? (
@@ -382,21 +681,55 @@ export function WarehouseList() {
                   )}
                 </div>
                 <div className="flex-shrink-0 flex flex-col gap-2">
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    warehouse.isActive 
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' 
-                      : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
-                  }`}>
-                    {warehouse.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                  {warehouse.isVirtual && (
-                    <button
-                      onClick={() => handleCreateFromInventory(warehouse)}
-                      className="px-3 py-1 text-xs bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
-                    >
-                      Create Record
-                    </button>
-                  )}
+                  <div className="flex gap-2 mb-2">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      warehouse.isActive 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' 
+                        : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
+                    }`}>
+                      {warehouse.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300">
+                      {warehouse.itemCount || 0} items
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    {warehouse.isVirtual ? (
+                      <button
+                        onClick={() => handleCreateFromInventory(warehouse)}
+                        className="px-3 py-1 text-xs bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+                      >
+                        Create Record
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleEditWarehouse(warehouse)}
+                          className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteWarehouse(warehouse)}
+                          className={`px-3 py-1 text-xs rounded transition-colors ${
+                            (warehouse.itemCount ?? 0) > 0 || warehouse.isCentralWarehouse
+                              ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                              : 'bg-red-600 text-white hover:bg-red-700'
+                          }`}
+                          disabled={(warehouse.itemCount ?? 0) > 0 || warehouse.isCentralWarehouse || deleting === warehouse.id}
+                          title={
+                            warehouse.isCentralWarehouse
+                              ? 'Cannot delete central warehouse'
+                              : (warehouse.itemCount ?? 0) > 0 
+                              ? 'Cannot delete warehouses with inventory items' 
+                              : 'Delete warehouse'
+                          }
+                        >
+                          {deleting === warehouse.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

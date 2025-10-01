@@ -26,6 +26,9 @@ export async function GET(req: Request) {
       warehouse: inv.warehouseName,
       qty: inv.stockQty,
       alert: inv.stockAlertLevel,
+      unit: inv.unit,
+      baseUnit: inv.baseUnit,
+      conversionFactor: inv.conversionFactor,
       expireDate: inv.expireDate,
     }
   });

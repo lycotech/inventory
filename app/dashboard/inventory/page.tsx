@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useSearchParams, useRouter } from "next/navigation";
 import { AccessControl } from "@/components/access-control";
+import { convertQuantity } from "@/lib/units";
 
 type TxRow = {
   id: number;
@@ -14,6 +15,9 @@ type TxRow = {
   itemName: string;
   warehouse: string;
   quantity: number;
+  unit?: string;
+  baseUnit?: string;
+  conversionFactor?: number;
   referenceDoc?: string;
   reason?: string;
   by: string;
@@ -166,10 +170,11 @@ function ReceiveCard() {
   const [barcode, setBarcode] = useState("");
   const [warehouseName, setWarehouseName] = useState("");
   const [warehouses, setWarehouses] = useState<{id: number; warehouseName: string; warehouseCode: string; location?: string}[]>([]);
-  const [found, setFound] = useState<{ itemName: string; qty: number } | null>(null);
+  const [found, setFound] = useState<{ itemName: string; qty: number; unit?: string; baseUnit?: string; conversionFactor?: number } | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [qty, setQty] = useState<number | "">("");
+  const [inputUnit, setInputUnit] = useState(""); // Unit for user input
   const [ref, setRef] = useState("");
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
@@ -207,7 +212,13 @@ function ReceiveCard() {
         const res = await fetch(`/api/inventory/lookup?barcode=${encodeURIComponent(barcode)}&warehouseName=${encodeURIComponent(warehouseName)}`, { cache: "no-store" });
         const json = await res.json();
         if (json.found) {
-          setFound({ itemName: json.item.itemName, qty: json.item.qty });
+          setFound({ 
+            itemName: json.item.itemName, 
+            qty: json.item.qty,
+            unit: json.item.unit,
+            baseUnit: json.item.baseUnit,
+            conversionFactor: json.item.conversionFactor
+          });
           setNotFound(false);
         } else {
           setFound(null);
@@ -247,6 +258,7 @@ function ReceiveCard() {
         barcode, 
         warehouseName, 
         quantity: Number(qty), 
+        inputUnit: inputUnit || undefined, // Unit for conversion
         referenceDoc: ref || undefined, 
         reason: reason || undefined 
       };
@@ -322,7 +334,7 @@ function ReceiveCard() {
           )}
           {!lookupLoading && found && (
             <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 bg-emerald-50 dark:bg-emerald-900/20 p-2 rounded-lg">
-              <strong>{found.itemName}</strong> • Current stock: {found.qty}
+              <strong>{found.itemName}</strong> • Current stock: {found.qty.toLocaleString()} {found.unit || 'pieces'}
             </div>
           )}
           {!lookupLoading && !found && notFound && warehouseName && barcode && (
@@ -357,7 +369,7 @@ function ReceiveCard() {
           )}
         </div>
         
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Quantity</label>
             <Input 
@@ -369,6 +381,26 @@ function ReceiveCard() {
             />
           </div>
           <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Unit</label>
+            <select
+              value={inputUnit}
+              onChange={(e) => setInputUnit(e.target.value)}
+              className="h-11 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 px-3 text-sm focus:border-emerald-500 focus:ring-emerald-500 dark:text-gray-100"
+            >
+              <option value="">Same as item unit</option>
+              {found && found.unit && <option value={found.unit}>{found.unit}</option>}
+              {found && found.baseUnit && found.baseUnit !== found.unit && <option value={found.baseUnit}>{found.baseUnit}</option>}
+              <option value="piece">piece</option>
+              <option value="gram">gram</option>
+              <option value="kilogram">kilogram</option>
+              <option value="carton">carton</option>
+              <option value="pack">pack</option>
+              <option value="dozen">dozen</option>
+              <option value="liter">liter</option>
+              <option value="milliliter">milliliter</option>
+            </select>
+          </div>
+          <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Reference</label>
             <Input 
               value={ref} 
@@ -378,6 +410,28 @@ function ReceiveCard() {
             />
           </div>
         </div>
+        
+        {/* Unit Conversion Preview */}
+        {found && qty && inputUnit && inputUnit !== found.unit && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+            <p className="text-xs text-blue-700 dark:text-blue-300 font-medium mb-1">Unit Conversion Preview:</p>
+            <p className="text-sm text-blue-600 dark:text-blue-400">
+              {qty} {inputUnit} = {(() => {
+                try {
+                  if (inputUnit === found.baseUnit && found.conversionFactor) {
+                    return Math.round(Number(qty) / Number(found.conversionFactor));
+                  } else if (found.unit === found.baseUnit && found.conversionFactor) {
+                    return Math.round(Number(qty) * Number(found.conversionFactor));
+                  }
+                  const { convertQuantity } = require('@/lib/units');
+                  return convertQuantity(Number(qty), inputUnit as any, found.unit as any).toLocaleString();
+                } catch {
+                  return "conversion not available";
+                }
+              })()} {found.unit} (will be added to inventory)
+            </p>
+          </div>
+        )}
         
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Reason (Optional)</label>
@@ -511,10 +565,11 @@ function TransferCard() {
   const [fromWarehouseName, setFromWarehouseName] = useState("");
   const [toWarehouseName, setToWarehouseName] = useState("");
   const [warehouses, setWarehouses] = useState<{id: number; warehouseName: string; warehouseCode: string; location?: string}[]>([]);
-  const [found, setFound] = useState<{ itemName: string; qty: number } | null>(null);
+  const [found, setFound] = useState<{ itemName: string; qty: number; unit?: string; baseUnit?: string; conversionFactor?: number } | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [qty, setQty] = useState<number | "">("");
+  const [inputUnit, setInputUnit] = useState(""); // Unit for user input
   const [ref, setRef] = useState("");
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
@@ -542,7 +597,13 @@ function TransferCard() {
         const res = await fetch(`/api/inventory/lookup?barcode=${encodeURIComponent(barcode)}&warehouseName=${encodeURIComponent(fromWarehouseName)}`, { cache: "no-store" });
         const json = await res.json();
         if (json.found) {
-          setFound({ itemName: json.item.itemName, qty: json.item.qty });
+          setFound({ 
+            itemName: json.item.itemName, 
+            qty: json.item.qty,
+            unit: json.item.unit,
+            baseUnit: json.item.baseUnit,
+            conversionFactor: json.item.conversionFactor
+          });
           setNotFound(false);
         } else {
           setFound(null);
@@ -571,6 +632,7 @@ function TransferCard() {
       fromWarehouse: fromWarehouseName, 
       toWarehouse: toWarehouseName, 
       quantity: Number(qty), 
+      inputUnit: inputUnit || undefined, // Unit for conversion
       referenceDoc: ref || undefined, 
       reason: reason || undefined 
     }),
@@ -676,7 +738,7 @@ function TransferCard() {
           )}
         </div>
         
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Quantity</label>
             <Input 
@@ -688,6 +750,26 @@ function TransferCard() {
             />
           </div>
           <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Unit</label>
+            <select
+              value={inputUnit}
+              onChange={(e) => setInputUnit(e.target.value)}
+              className="h-11 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 px-3 text-sm focus:border-green-500 focus:ring-green-500 dark:text-gray-100"
+            >
+              <option value="">Same as item unit</option>
+              {found && found.unit && <option value={found.unit}>{found.unit}</option>}
+              {found && found.baseUnit && found.baseUnit !== found.unit && <option value={found.baseUnit}>{found.baseUnit}</option>}
+              <option value="piece">piece</option>
+              <option value="gram">gram</option>
+              <option value="kilogram">kilogram</option>
+              <option value="carton">carton</option>
+              <option value="pack">pack</option>
+              <option value="dozen">dozen</option>
+              <option value="liter">liter</option>
+              <option value="milliliter">milliliter</option>
+            </select>
+          </div>
+          <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Reference</label>
             <Input 
               value={ref} 
@@ -697,6 +779,28 @@ function TransferCard() {
             />
           </div>
         </div>
+        
+        {/* Unit Conversion Preview for Transfer */}
+        {found && qty && inputUnit && inputUnit !== found.unit && (
+          <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+            <p className="text-xs text-green-700 dark:text-green-300 font-medium mb-1">Unit Conversion Preview:</p>
+            <p className="text-sm text-green-600 dark:text-green-400">
+              {qty} {inputUnit} = {(() => {
+                try {
+                  if (inputUnit === found.baseUnit && found.conversionFactor) {
+                    return Math.round(Number(qty) / Number(found.conversionFactor));
+                  } else if (found.unit === found.baseUnit && found.conversionFactor) {
+                    return Math.round(Number(qty) * Number(found.conversionFactor));
+                  }
+                  const { convertQuantity } = require('@/lib/units');
+                  return convertQuantity(Number(qty), inputUnit as any, found.unit as any).toLocaleString();
+                } catch {
+                  return "conversion not available";
+                }
+              })()} {found.unit} (will be transferred)
+            </p>
+          </div>
+        )}
         
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Reason (Optional)</label>
@@ -876,6 +980,12 @@ function HistoryRow({ row }: { row: TxRow }) {
     return Math.abs(quantity).toLocaleString();
   };
 
+  const formatWithUnit = (quantity: number) => {
+    if (!mounted) return "0";
+    const unit = row.unit || 'piece';
+    return `${formatQuantity(quantity)} ${unit}`;
+  };
+
   return (
     <div className={`rounded-xl border ${typeConfig.border} ${typeConfig.cardBg} p-4 transition-all duration-200 hover:shadow-md`}>
       <div className="flex items-center justify-between gap-4">
@@ -904,9 +1014,14 @@ function HistoryRow({ row }: { row: TxRow }) {
           </div>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
-          <span className="text-lg font-bold text-gray-900 dark:text-gray-100 tabular-nums">
-            {row.type === 'issue' ? '-' : '+'}{formatQuantity(row.quantity)}
-          </span>
+          <div className="text-right">
+            <span className="text-lg font-bold text-gray-900 dark:text-gray-100 tabular-nums">
+              {row.type === 'issue' ? '-' : '+'}{formatQuantity(row.quantity)}
+            </span>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {row.unit || 'pieces'}
+            </div>
+          </div>
           <span className={`text-xs rounded-full px-3 py-1.5 font-medium ${typeConfig.bg} ${typeConfig.text} shadow-sm`}>
             {typeConfig.label}
           </span>

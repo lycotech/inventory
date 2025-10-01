@@ -16,10 +16,11 @@ export async function POST(req: Request) {
   }
   
   const body = await req.json().catch(() => ({}));
-  const { barcode, warehouseName, quantity, referenceDoc, reason, allowNonCentral } = body as {
+  const { barcode, warehouseName, quantity, inputUnit, referenceDoc, reason, allowNonCentral } = body as {
     barcode?: string;
     warehouseName?: string;
     quantity?: number;
+    inputUnit?: string;
     referenceDoc?: string;
     reason?: string;
     allowNonCentral?: boolean; // For admin override
@@ -51,12 +52,32 @@ export async function POST(req: Request) {
     const inv = await prisma.inventory.findUnique({ where: { barcode_warehouse: { barcode, warehouseName } } });
     if (!inv) return NextResponse.json({ error: "Inventory not found" }, { status: 404 });
 
+    // Handle unit conversion if needed
+    let finalQuantity = Math.abs(quantity!);
+    if (inputUnit && inputUnit !== inv.unit) {
+      try {
+        const { convertQuantity } = await import('@/lib/units');
+        finalQuantity = convertQuantity(Math.abs(quantity!), inputUnit as any, inv.unit as any);
+      } catch (error) {
+        // Try using the item's conversion factor
+        if (inputUnit === inv.baseUnit && inv.conversionFactor) {
+          finalQuantity = Math.round(Math.abs(quantity!) / Number(inv.conversionFactor));
+        } else if (inv.unit === inv.baseUnit && inv.conversionFactor) {
+          finalQuantity = Math.round(Math.abs(quantity!) * Number(inv.conversionFactor));
+        } else {
+          return NextResponse.json({ 
+            error: `Cannot convert from ${inputUnit} to ${inv.unit}. Please use ${inv.unit} or provide valid conversion.` 
+          }, { status: 400 });
+        }
+      }
+    }
+
     const tx = await prisma.$transaction(async (db: Parameters<typeof prisma.$transaction>[0] extends (arg: infer A) => any ? A : any) => {
     const t = await db.stockTransaction.create({
       data: {
         inventoryId: inv.id,
         transactionType: "receive",
-        quantity: Math.abs(quantity!),
+        quantity: finalQuantity,
         transactionDate: new Date(),
         referenceDoc: referenceDoc || null,
         reason: reason || null,
@@ -65,7 +86,7 @@ export async function POST(req: Request) {
     });
     const updated = await db.inventory.update({
       where: { id: inv.id },
-      data: { stockQty: { increment: Math.abs(quantity!) } },
+      data: { stockQty: { increment: finalQuantity } },
     });
     // If after receiving it's still below threshold, ensure a low stock alert exists and notify
     try {
@@ -97,7 +118,15 @@ export async function POST(req: Request) {
     return t;
     });
 
-    return NextResponse.json({ ok: true, id: tx.id });
+    const conversionMessage = inputUnit && inputUnit !== inv.unit 
+      ? ` (converted from ${quantity} ${inputUnit} to ${finalQuantity} ${inv.unit})`
+      : '';
+    
+    return NextResponse.json({ 
+      ok: true, 
+      id: tx.id, 
+      message: `Successfully received ${finalQuantity} ${inv.unit}${conversionMessage}` 
+    });
   } catch (error: any) {
     console.error("Stock receive error:", error);
     return NextResponse.json({ 
