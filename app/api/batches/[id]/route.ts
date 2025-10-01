@@ -132,6 +132,8 @@ export async function PUT(
     const body = await request.json();
     const {
       batchNumber,
+      quantityReceived,
+      quantityRemaining,
       manufactureDate,
       expiryDate,
       supplierInfo,
@@ -169,6 +171,8 @@ export async function PUT(
       where: { id: batchId },
       data: {
         ...(batchNumber && { batchNumber }),
+        ...(quantityReceived !== undefined && { quantityReceived: parseFloat(quantityReceived) }),
+        ...(quantityRemaining !== undefined && { quantityRemaining: parseFloat(quantityRemaining) }),
         ...(manufactureDate !== undefined && { 
           manufactureDate: manufactureDate ? new Date(manufactureDate) : null 
         }),

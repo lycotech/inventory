@@ -24,9 +24,9 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
     
-    // Get all inventory items with quantities > 0
+    // Get all inventory items with non-zero quantities (both positive and negative)
     const inventoryItems = await prisma.inventory.findMany({
-      where: { stockQty: { gt: 0 } },
+      where: { stockQty: { not: 0 } },
       select: {
         id: true,
         barcode: true,
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     
     if (inventoryItems.length === 0) {
       return NextResponse.json({ 
-        message: "No items found with quantity > 0",
+        message: "No items found with non-zero quantities",
         resetCount: 0,
         transactionCount: 0
       });
@@ -61,7 +61,13 @@ export async function POST(req: Request) {
       for (const item of inventoryItems) {
         const currentQty = item.stockQty;
         
-        // Create audit transaction
+        // Create audit transaction with appropriate reason
+        const adjustmentReason = currentQty > 0 
+          ? `${reason || 'Stock quantity reset to zero'} - Positive stock adjustment`
+          : currentQty < 0 
+          ? `${reason || 'Stock quantity reset to zero'} - Negative stock correction`
+          : `${reason || 'Stock quantity reset to zero'} - Administrative adjustment`;
+          
         await tx.stockTransaction.create({
           data: {
             inventoryId: item.id,
@@ -69,7 +75,7 @@ export async function POST(req: Request) {
             quantity: -currentQty,
             transactionDate: new Date(),
             referenceDoc: `RESET-${new Date().toISOString().slice(0, 10)}`,
-            reason: reason || 'Stock quantity reset to zero - Administrative adjustment',
+            reason: adjustmentReason,
             processedBy: session.user.id
           }
         });
@@ -95,15 +101,25 @@ export async function POST(req: Request) {
     });
     
     // Verify the reset
-    const remainingItems = await prisma.inventory.count({
+    const remainingItemsWithStock = await prisma.inventory.count({
+      where: { stockQty: { not: 0 } }
+    });
+    
+    const positiveStockItems = await prisma.inventory.count({
       where: { stockQty: { gt: 0 } }
+    });
+    
+    const negativeStockItems = await prisma.inventory.count({
+      where: { stockQty: { lt: 0 } }
     });
     
     return NextResponse.json({
       message: "Stock quantities reset successfully",
       resetCount,
       transactionCount,
-      remainingItemsWithStock: remainingItems,
+      remainingItemsWithNonZeroStock: remainingItemsWithStock,
+      remainingPositiveStockItems: positiveStockItems,
+      remainingNegativeStockItems: negativeStockItems,
       resetItems: resetItems.slice(0, 10), // Return first 10 for verification
       timestamp: new Date().toISOString()
     });
@@ -127,8 +143,14 @@ export async function GET(req: Request) {
   try {
     // Return current stock summary
     const totalItems = await prisma.inventory.count();
-    const itemsWithStock = await prisma.inventory.count({
+    const itemsWithPositiveStock = await prisma.inventory.count({
       where: { stockQty: { gt: 0 } }
+    });
+    const itemsWithNegativeStock = await prisma.inventory.count({
+      where: { stockQty: { lt: 0 } }
+    });
+    const itemsWithZeroStock = await prisma.inventory.count({
+      where: { stockQty: 0 }
     });
     const totalStock = await prisma.inventory.aggregate({
       _sum: { stockQty: true }
@@ -136,8 +158,10 @@ export async function GET(req: Request) {
     
     return NextResponse.json({
       totalItems,
-      itemsWithStock,
-      itemsWithoutStock: totalItems - itemsWithStock,
+      itemsWithPositiveStock,
+      itemsWithNegativeStock,
+      itemsWithZeroStock,
+      itemsWithNonZeroStock: itemsWithPositiveStock + itemsWithNegativeStock,
       totalStockQuantity: totalStock._sum.stockQty || 0
     });
     

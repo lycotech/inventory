@@ -36,10 +36,10 @@ npx ts-node scripts/reset-stock-quantities.ts
 ```
 
 **What it does:**
-1. Finds all items with stockQty > 0
-2. Creates "adjustment" transactions for each item
-3. Updates stockQty to 0
-4. Provides detailed summary and verification
+1. Finds all items with non-zero stockQty (both positive and negative)
+2. Creates "adjustment" transactions for each item with appropriate reasons
+3. Updates stockQty to 0 for all items
+4. Provides detailed summary and verification with stock breakdown
 
 ---
 
@@ -65,9 +65,9 @@ mysql -u username -p inventory_db < scripts/reset-stock-quantities.sql
 ```
 
 **What it does:**
-1. Creates audit transactions first
-2. Resets all quantities to zero
-3. Provides verification queries
+1. Creates audit transactions for both positive and negative stock
+2. Resets all quantities to zero (handles positive and negative values)  
+3. Provides detailed verification queries with stock breakdown
 4. Includes rollback instructions
 
 ---
@@ -96,6 +96,12 @@ curl -X POST "http://localhost:3000/api/admin/reset-stock" \
     "reason": "Annual inventory reset"
   }'
 ```
+
+**What it does:**
+1. Validates admin authentication and permissions
+2. Creates audit transactions for both positive and negative stock
+3. Resets all quantities to zero using database transactions
+4. Returns detailed response with stock breakdown and verification data
 
 ---
 
@@ -148,10 +154,13 @@ import StockResetComponent from '@/components/admin/stock-reset';
 After reset, verify with these queries:
 
 ```sql
--- Check items still with stock (should be 0)
-SELECT COUNT(*) as items_with_stock 
+-- Check items still with non-zero stock (should be 0)
+SELECT 
+    COUNT(*) as items_with_non_zero_stock,
+    COUNT(CASE WHEN stockQty > 0 THEN 1 END) as items_with_positive_stock,
+    COUNT(CASE WHEN stockQty < 0 THEN 1 END) as items_with_negative_stock
 FROM Inventory 
-WHERE stockQty > 0;
+WHERE stockQty != 0;
 
 -- Verify audit trail created
 SELECT COUNT(*) as reset_transactions 
@@ -199,6 +208,13 @@ WHERE i.id IN (
 ```
 
 ---
+
+## Key Features
+
+- ✅ **Handles Both Stock Types:** All methods now reset both positive and negative stock quantities
+- ✅ **Comprehensive Audit Trail:** Separate transaction records for positive vs negative adjustments  
+- ✅ **Detailed Reporting:** Enhanced verification queries show breakdown of stock types
+- ✅ **Safe Operations:** All methods preserve data integrity and provide rollback capabilities
 
 ## Recommendations
 

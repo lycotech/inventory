@@ -15,10 +15,10 @@ async function resetStockQuantities() {
     
     console.log(`Using admin user: ${adminUser.username} (ID: ${adminUser.id})`);
     
-    // Get all inventory items with quantities > 0
+    // Get all inventory items with non-zero quantities (both positive and negative)
     const inventoryItems = await prisma.inventory.findMany({
       where: {
-        stockQty: { gt: 0 }
+        stockQty: { not: 0 }
       },
       select: {
         id: true,
@@ -30,17 +30,30 @@ async function resetStockQuantities() {
     });
     
     if (inventoryItems.length === 0) {
-      console.log("✅ No items found with quantity > 0. Nothing to reset.");
+      console.log("✅ No items found with non-zero quantities. Nothing to reset.");
       return;
     }
     
-    console.log(`Found ${inventoryItems.length} items with quantities > 0`);
+    const positiveItems = inventoryItems.filter(item => item.stockQty > 0);
+    const negativeItems = inventoryItems.filter(item => item.stockQty < 0);
+    
+    console.log(`Found ${inventoryItems.length} items with non-zero quantities:`);
+    console.log(`  - ${positiveItems.length} items with positive stock`);
+    console.log(`  - ${negativeItems.length} items with negative stock`);
     
     // Create confirmation prompt
     console.log("\n📋 Items to be reset:");
-    inventoryItems.forEach(item => {
-      console.log(`  - ${item.itemName} (${item.barcode}) at ${item.warehouseName}: ${item.stockQty} → 0`);
+    console.log("🟢 Positive Stock Items:");
+    positiveItems.forEach(item => {
+      console.log(`  - ${item.itemName} (${item.barcode}) at ${item.warehouseName}: +${item.stockQty} → 0`);
     });
+    
+    if (negativeItems.length > 0) {
+      console.log("🔴 Negative Stock Items:");
+      negativeItems.forEach(item => {
+        console.log(`  - ${item.itemName} (${item.barcode}) at ${item.warehouseName}: ${item.stockQty} → 0`);
+      });
+    }
     
     // In a real scenario, you'd want manual confirmation here
     // For script execution, we'll proceed
@@ -53,14 +66,20 @@ async function resetStockQuantities() {
       const currentQty = item.stockQty;
       
       // Create an "adjustment" transaction record for audit trail
+      const reason = currentQty > 0 
+        ? 'Stock quantity reset to zero - Positive stock adjustment'
+        : currentQty < 0 
+        ? 'Stock quantity reset to zero - Negative stock correction'
+        : 'Stock quantity reset to zero - Administrative adjustment';
+        
       await prisma.stockTransaction.create({
         data: {
           inventoryId: item.id,
           transactionType: 'adjustment',
-          quantity: -currentQty, // Negative quantity to reduce to zero
+          quantity: -currentQty, // Negative of current quantity to bring to zero
           transactionDate: new Date(),
           referenceDoc: `RESET-${new Date().toISOString().slice(0, 10)}`,
-          reason: 'Stock quantity reset to zero - Administrative adjustment',
+          reason: reason,
           processedBy: adminUser.id
         }
       });
@@ -84,10 +103,21 @@ async function resetStockQuantities() {
     
     // Verify the reset
     const remainingItems = await prisma.inventory.count({
+      where: { stockQty: { not: 0 } }
+    });
+    
+    const positiveRemaining = await prisma.inventory.count({
       where: { stockQty: { gt: 0 } }
     });
     
-    console.log(`\n✅ Verification: ${remainingItems} items remaining with quantity > 0`);
+    const negativeRemaining = await prisma.inventory.count({
+      where: { stockQty: { lt: 0 } }
+    });
+    
+    console.log(`\n✅ Verification:`);
+    console.log(`  - ${remainingItems} items remaining with non-zero quantities`);
+    console.log(`  - ${positiveRemaining} items with positive stock`);
+    console.log(`  - ${negativeRemaining} items with negative stock`);
     
   } catch (error) {
     console.error("❌ Error during stock reset:", error);

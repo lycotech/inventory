@@ -11,7 +11,7 @@
 -- STEP 1: Create audit transactions first
 -- ==========================================
 
--- Insert adjustment transactions for all items with qty > 0
+-- Insert adjustment transactions for all items with non-zero qty (both positive and negative)
 INSERT INTO StockTransaction (
     inventoryId, 
     transactionType, 
@@ -24,13 +24,17 @@ INSERT INTO StockTransaction (
 SELECT 
     i.id,
     'adjustment',
-    -i.stockQty,  -- Negative quantity to record the reduction
+    -i.stockQty,  -- Negative of current quantity to bring to zero
     NOW(),
     CONCAT('RESET-', DATE_FORMAT(NOW(), '%Y-%m-%d')),
-    'Stock quantity reset to zero - Administrative adjustment',
+    CASE 
+        WHEN i.stockQty > 0 THEN 'Stock quantity reset to zero - Positive stock adjustment'
+        WHEN i.stockQty < 0 THEN 'Stock quantity reset to zero - Negative stock correction'
+        ELSE 'Stock quantity reset to zero - Administrative adjustment'
+    END,
     (SELECT id FROM User WHERE role = 'admin' LIMIT 1)  -- Use first admin user
 FROM Inventory i 
-WHERE i.stockQty > 0;
+WHERE i.stockQty != 0;
 
 -- Check how many transactions were created
 SELECT 
@@ -47,14 +51,18 @@ AND DATE(transactionDate) = CURDATE();
 -- Show items that will be affected (for verification)
 SELECT 
     COUNT(*) as items_to_reset,
-    SUM(stockQty) as total_current_quantity
+    SUM(stockQty) as total_current_quantity,
+    COUNT(CASE WHEN stockQty > 0 THEN 1 END) as positive_stock_items,
+    COUNT(CASE WHEN stockQty < 0 THEN 1 END) as negative_stock_items,
+    SUM(CASE WHEN stockQty > 0 THEN stockQty ELSE 0 END) as positive_stock_total,
+    SUM(CASE WHEN stockQty < 0 THEN stockQty ELSE 0 END) as negative_stock_total
 FROM Inventory 
-WHERE stockQty > 0;
+WHERE stockQty != 0;
 
--- Reset all stock quantities to zero
+-- Reset all stock quantities to zero (both positive and negative)
 UPDATE Inventory 
 SET stockQty = 0 
-WHERE stockQty > 0;
+WHERE stockQty != 0;
 
 -- ==========================================
 -- STEP 3: Verification queries
@@ -62,10 +70,12 @@ WHERE stockQty > 0;
 
 -- Verify reset completed
 SELECT 
-    COUNT(*) as items_with_stock,
-    SUM(stockQty) as total_remaining_stock
+    COUNT(*) as items_with_non_zero_stock,
+    SUM(stockQty) as total_remaining_stock,
+    COUNT(CASE WHEN stockQty > 0 THEN 1 END) as items_with_positive_stock,
+    COUNT(CASE WHEN stockQty < 0 THEN 1 END) as items_with_negative_stock
 FROM Inventory 
-WHERE stockQty > 0;
+WHERE stockQty != 0;
 
 -- Show recent reset transactions
 SELECT 

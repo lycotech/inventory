@@ -65,6 +65,235 @@ interface BatchFormData {
   notes: string;
 }
 
+interface EditBatchFormProps {
+  batch: Batch;
+  onSave: (data: any) => void;
+  onCancel: () => void;
+  updating: boolean;
+  inventoryItems: InventoryItem[];
+  warehouses: Warehouse[];
+}
+
+function EditBatchForm({ batch, onSave, onCancel, updating, inventoryItems, warehouses }: EditBatchFormProps) {
+  const [editFormData, setEditFormData] = useState({
+    batchNumber: batch.batchNumber,
+    quantityReceived: batch.quantityReceived.toString(),
+    quantityRemaining: batch.quantityRemaining.toString(),
+    manufactureDate: batch.manufactureDate ? new Date(batch.manufactureDate).toISOString().split('T')[0] : '',
+    expiryDate: new Date(batch.expiryDate).toISOString().split('T')[0],
+    supplierInfo: batch.supplierInfo || '',
+    lotNumber: batch.lotNumber || '',
+    costPerUnit: batch.costPerUnit?.toString() || '',
+    notes: batch.notes || '',
+    isActive: batch.isActive
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    
+    setEditFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Form submitted with data:', editFormData);
+    
+    const updatedData = {
+      ...editFormData,
+      quantityReceived: parseFloat(editFormData.quantityReceived) || 0,
+      quantityRemaining: parseFloat(editFormData.quantityRemaining) || 0,
+      costPerUnit: editFormData.costPerUnit ? parseFloat(editFormData.costPerUnit) : null,
+    };
+    
+    console.log('Processed data:', updatedData);
+    onSave(updatedData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Batch Number *
+          </label>
+          <input
+            type="text"
+            name="batchNumber"
+            required
+            value={editFormData.batchNumber}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Lot Number
+          </label>
+          <input
+            type="text"
+            name="lotNumber"
+            value={editFormData.lotNumber}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Quantity Received *
+          </label>
+          <input
+            type="number"
+            name="quantityReceived"
+            required
+            min="0"
+            step="0.01"
+            value={editFormData.quantityReceived}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Quantity Remaining
+          </label>
+          <input
+            type="number"
+            name="quantityRemaining"
+            min="0"
+            step="0.01"
+            value={editFormData.quantityRemaining}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Manufacture Date
+          </label>
+          <input
+            type="date"
+            name="manufactureDate"
+            value={editFormData.manufactureDate}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Expiry Date *
+          </label>
+          <input
+            type="date"
+            name="expiryDate"
+            required
+            value={editFormData.expiryDate}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Cost Per Unit
+          </label>
+          <input
+            type="number"
+            name="costPerUnit"
+            min="0"
+            step="0.01"
+            value={editFormData.costPerUnit}
+            onChange={handleInputChange}
+            placeholder="0.00"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Supplier Information
+          </label>
+          <input
+            type="text"
+            name="supplierInfo"
+            value={editFormData.supplierInfo}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Notes
+        </label>
+        <textarea
+          name="notes"
+          rows={3}
+          value={editFormData.notes}
+          onChange={handleInputChange}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
+
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          name="isActive"
+          checked={editFormData.isActive}
+          onChange={handleInputChange}
+          className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+        />
+        <label className="ml-2 block text-sm text-gray-700">
+          Active batch
+        </label>
+      </div>
+
+      {/* Form Actions */}
+      <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onCancel();
+          }}
+          disabled={updating}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          disabled={updating}
+          className="bg-green-600 hover:bg-green-700 text-white"
+        >
+          {updating ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Updating...
+            </>
+          ) : (
+            'Update Batch'
+          )}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 export default function BatchManagementPage() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
@@ -113,6 +342,15 @@ export default function BatchManagementPage() {
   const [deleteConfirmBatch, setDeleteConfirmBatch] = useState<Batch | null>(null);
   const [showBulkDeactivateConfirm, setShowBulkDeactivateConfirm] = useState(false);
   const [expiredBatchesCount, setExpiredBatchesCount] = useState(0);
+  
+  // Edit batch states
+  const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
+  const [updating, setUpdating] = useState(false);
+
+  // Debug useEffect for editingBatch state
+  useEffect(() => {
+    console.log('editingBatch state changed:', editingBatch);
+  }, [editingBatch]);
 
   useEffect(() => {
     fetchBatches();
@@ -401,6 +639,46 @@ export default function BatchManagementPage() {
     } catch (error) {
       console.error('Error deactivating expired batches:', error);
       alert('Error deactivating expired batches');
+    }
+  };
+
+  const handleEditBatch = (batch: Batch) => {
+    console.log('Edit batch clicked:', batch);
+    console.log('Current editingBatch state:', editingBatch);
+    setEditingBatch(batch);
+    console.log('Set editingBatch to:', batch);
+  };
+
+  const handleUpdateBatch = async (updatedData: any) => {
+    console.log('handleUpdateBatch called with:', updatedData);
+    if (!editingBatch) {
+      console.log('No editing batch found');
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      const response = await fetch(`/api/batches/${editingBatch.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedData),
+      });
+
+      if (response.ok) {
+        setEditingBatch(null);
+        fetchBatches();
+        alert('Batch updated successfully!');
+      } else {
+        const error = await response.json();
+        alert(`Error updating batch: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating batch:', error);
+      alert('Error updating batch');
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -920,6 +1198,23 @@ export default function BatchManagementPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex space-x-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Edit button clicked for batch:', batch.batchNumber);
+                            if (batch) {
+                              handleEditBatch(batch);
+                            }
+                          }}
+                          className="inline-flex items-center px-3 py-1.5 border border-green-300 text-xs font-medium rounded text-green-600 bg-white hover:bg-green-50 hover:text-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                        >
+                          <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Edit
+                        </button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -1305,6 +1600,53 @@ export default function BatchManagementPage() {
                 </Button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Batch Modal */}
+      {editingBatch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+            onClick={() => {
+              console.log('Backdrop clicked, closing modal');
+              setEditingBatch(null);
+            }}
+          ></div>
+          
+          <div 
+            className="relative bg-white rounded-lg px-6 pt-6 pb-6 shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('Modal content clicked');
+            }}
+          >
+            {/* Edit Icon */}
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+              <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </div>
+
+            {/* Modal Content */}
+            <div className="text-center mb-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Edit Batch: {editingBatch.batchNumber}
+              </h3>
+              <p className="text-sm text-gray-500">
+                Update batch details below. Changes will be saved immediately.
+              </p>
+            </div>
+
+            <EditBatchForm 
+              batch={editingBatch}
+              onSave={handleUpdateBatch}
+              onCancel={() => setEditingBatch(null)}
+              updating={updating}
+              inventoryItems={inventoryItems}
+              warehouses={warehouses}
+            />
           </div>
         </div>
       )}
