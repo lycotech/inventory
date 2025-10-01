@@ -108,6 +108,12 @@ export default function BatchManagementPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  // Batch detail and delete states
+  const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
+  const [deleteConfirmBatch, setDeleteConfirmBatch] = useState<Batch | null>(null);
+  const [showBulkDeactivateConfirm, setShowBulkDeactivateConfirm] = useState(false);
+  const [expiredBatchesCount, setExpiredBatchesCount] = useState(0);
+
   useEffect(() => {
     fetchBatches();
     fetchInventoryItems();
@@ -226,8 +232,13 @@ export default function BatchManagementPage() {
       const response = await fetch(`/api/batches?${params}`);
       if (response.ok) {
         const data = await response.json();
+        console.log('Fetched batches data:', data.batches);
         setBatches(data.batches);
         setTotalPages(data.pagination.pages);
+        
+        // Count expired batches
+        const expiredCount = data.batches.filter((batch: Batch) => batch.isExpired).length;
+        setExpiredBatchesCount(expiredCount);
       }
     } catch (error) {
       console.error('Error fetching batches:', error);
@@ -343,6 +354,56 @@ export default function BatchManagementPage() {
     }
   };
 
+  const handleDeleteBatch = async (batchId: number) => {
+    try {
+      const response = await fetch(`/api/batches/${batchId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        setDeleteConfirmBatch(null);
+        fetchBatches();
+        alert('Batch deleted successfully!');
+      } else {
+        const error = await response.json();
+        alert(`Error deleting batch: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error deleting batch:', error);
+      alert('Error deleting batch');
+    }
+  };
+
+  const handleBulkDeactivateExpired = async () => {
+    try {
+      const response = await fetch('/api/batches', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'deactivate-expired'
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setShowBulkDeactivateConfirm(false);
+        fetchBatches();
+        alert(`Successfully deactivated ${result.deactivatedCount} expired batch${result.deactivatedCount !== 1 ? 'es' : ''}!`);
+      } else {
+        const error = await response.json();
+        alert(`Error deactivating batches: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error deactivating expired batches:', error);
+      alert('Error deactivating expired batches');
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -384,13 +445,82 @@ export default function BatchManagementPage() {
     <div className="space-y-6">
       {/* Batch Management Header */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Batch Management</h1>
-        <Button onClick={() => setShowCreateForm(true)}>
-          Create New Batch
-        </Button>
+        <div>
+          <h1 className="text-2xl font-bold">Batch Management</h1>
+          {expiredBatchesCount > 0 && (
+            <p className="text-sm text-red-600 mt-1">
+              ⚠️ {expiredBatchesCount} expired batch{expiredBatchesCount !== 1 ? 'es' : ''} found
+            </p>
+          )}
+        </div>
+        <div className="flex space-x-2">
+          {expiredBatchesCount > 0 && (
+            <Button 
+              onClick={() => setShowBulkDeactivateConfirm(true)}
+              variant="outline"
+              className="text-red-600 hover:text-red-800 border-red-300 hover:border-red-500"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Deactivate All Expired ({expiredBatchesCount})
+            </Button>
+          )}
+
+          <Button onClick={() => setShowCreateForm(true)}>
+            Create New Batch
+          </Button>
+        </div>
       </div>
 
-      {/* Filters */}
+      {/* Quick Filters */}
+      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+        <h3 className="text-sm font-medium mb-3 text-gray-700">Quick Filters</h3>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={filters.expired && !filters.expiringDays ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilters({ ...filters, expired: true, expiringDays: '', activeOnly: true })}
+          >
+            <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Expired Only
+          </Button>
+          <Button
+            variant={filters.expiringDays === '7' ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilters({ ...filters, expiringDays: '7', expired: false, activeOnly: true })}
+          >
+            <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Expiring in 7 Days
+          </Button>
+          <Button
+            variant={filters.expiringDays === '30' ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilters({ ...filters, expiringDays: '30', expired: false, activeOnly: true })}
+          >
+            <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z" />
+            </svg>
+            Expiring in 30 Days
+          </Button>
+          <Button
+            variant={!filters.expired && !filters.expiringDays ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilters({ ...filters, expired: false, expiringDays: '', activeOnly: true })}
+          >
+            <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            All Active
+          </Button>
+        </div>
+      </div>
+
+      {/* Advanced Filters */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
         <div>
           <label className="block text-sm font-medium mb-1">Warehouse</label>
@@ -713,14 +843,22 @@ export default function BatchManagementPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Created
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {Array.isArray(batches) && batches.map((batch, index) => {
                 const expiryStatus = getExpiryStatus(batch);
                 const keyValue = batch?.id ? `batch-${batch.id}` : `batch-fallback-${index}`;
+                const rowBgColor = batch.isExpired 
+                  ? 'bg-red-50 hover:bg-red-100 border-l-4 border-red-500' 
+                  : batch.isExpiringSoon 
+                    ? 'bg-yellow-50 hover:bg-yellow-100 border-l-4 border-yellow-500' 
+                    : 'hover:bg-gray-50';
                 return (
-                  <tr key={keyValue} className="hover:bg-gray-50">
+                  <tr key={keyValue} className={rowBgColor}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
@@ -780,6 +918,38 @@ export default function BatchManagementPage() {
                         by {batch.creator.firstName} {batch.creator.lastName}
                       </div>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            console.log('View button clicked, batch:', batch);
+                            setSelectedBatch(batch);
+                          }}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          View
+                        </Button>
+                        {(batch.isExpired || batch.isExpiringSoon) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDeleteConfirmBatch(batch)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Delete
+                          </Button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -818,6 +988,324 @@ export default function BatchManagementPage() {
       {batches.length === 0 && (
         <div className="text-center py-8 text-gray-500">
           No batches found. Create your first batch to get started.
+        </div>
+      )}
+
+      {/* Batch Detail Modal */}
+      {selectedBatch && (
+        <div 
+          className="fixed inset-0 overflow-y-auto" 
+          style={{ 
+            zIndex: 9999, 
+            backgroundColor: 'rgba(0,0,0,0.8)',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0
+          }}
+        >
+          <div className="flex items-center justify-center min-h-screen p-4">
+            <div 
+              className="bg-white rounded-lg shadow-2xl max-w-4xl w-full p-6 relative"
+              style={{ maxHeight: '90vh', overflowY: 'auto' }}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Batch Details: {selectedBatch.batchNumber}
+                </h3>
+                <button
+                  onClick={() => setSelectedBatch(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Basic Information */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900">Basic Information</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Item Name</label>
+                      <p className="text-sm text-gray-900">{selectedBatch.inventory.itemName}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Barcode</label>
+                      <p className="text-sm text-gray-900">{selectedBatch.inventory.barcode}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Category</label>
+                      <p className="text-sm text-gray-900">{selectedBatch.inventory.category}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Warehouse</label>
+                      <p className="text-sm text-gray-900">{selectedBatch.warehouse.warehouseName} ({selectedBatch.warehouse.warehouseCode})</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Batch Information */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900">Batch Information</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Batch Number</label>
+                      <p className="text-sm text-gray-900">{selectedBatch.batchNumber}</p>
+                    </div>
+                    {selectedBatch.lotNumber && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Lot Number</label>
+                        <p className="text-sm text-gray-900">{selectedBatch.lotNumber}</p>
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Quantity</label>
+                      <p className="text-sm text-gray-900">
+                        {selectedBatch.quantityRemaining} / {selectedBatch.quantityReceived}
+                        <span className="text-gray-500 ml-2">(Available / Received)</span>
+                      </p>
+                    </div>
+                    {selectedBatch.costPerUnit && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Cost Per Unit</label>
+                        <p className="text-sm text-gray-900">${Number(selectedBatch.costPerUnit).toFixed(2)}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Expiry Information */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900">Expiry Information</h4>
+                  <div className="space-y-3">
+                    {selectedBatch.manufactureDate && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Manufacture Date</label>
+                        <p className="text-sm text-gray-900">{formatDate(selectedBatch.manufactureDate)}</p>
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Expiry Date</label>
+                      <p className="text-sm text-gray-900">{formatDate(selectedBatch.expiryDate)}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Expiry Status</label>
+                      <div className="flex items-center space-x-2">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getExpiryStatus(selectedBatch).color}`}>
+                          {getExpiryStatus(selectedBatch).status}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {getExpiryStatus(selectedBatch).status === 'Expired' 
+                            ? `${getExpiryStatus(selectedBatch).days} days ago`
+                            : `${getExpiryStatus(selectedBatch).days} days left`
+                          }
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Supplier Information */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900">Additional Information</h4>
+                  <div className="space-y-3">
+                    {selectedBatch.supplierInfo && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Supplier</label>
+                        <p className="text-sm text-gray-900">{selectedBatch.supplierInfo}</p>
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Created By</label>
+                      <p className="text-sm text-gray-900">
+                        {selectedBatch.creator.firstName} {selectedBatch.creator.lastName} ({selectedBatch.creator.username})
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Created Date</label>
+                      <p className="text-sm text-gray-900">{formatDate(selectedBatch.createdAt)}</p>
+                    </div>
+                    {selectedBatch.notes && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Notes</label>
+                        <p className="text-sm text-gray-900">{selectedBatch.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+                {(selectedBatch.isExpired || selectedBatch.isExpiringSoon) && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setDeleteConfirmBatch(selectedBatch);
+                      setSelectedBatch(null);
+                    }}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete Expired Batch
+                  </Button>
+                )}
+                <Button onClick={() => setSelectedBatch(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmBatch && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={() => setDeleteConfirmBatch(null)}></div>
+            </div>
+            
+            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+              {/* Warning Icon */}
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+
+              {/* Modal Content */}
+              <div className="text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Delete Batch
+                </h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Are you sure you want to delete batch "{deleteConfirmBatch.batchNumber}"? 
+                  This action will mark the batch as inactive and cannot be undone.
+                </p>
+                
+                {/* Batch Details */}
+                <div className="bg-gray-50 rounded-lg p-4 mb-4 text-left">
+                  <h4 className="font-medium text-gray-900 mb-2">Batch Information:</h4>
+                  <div className="space-y-1 text-sm text-gray-600">
+                    <p><strong>Item:</strong> {deleteConfirmBatch.inventory.itemName}</p>
+                    <p><strong>Warehouse:</strong> {deleteConfirmBatch.warehouse.warehouseName}</p>
+                    <p><strong>Remaining Quantity:</strong> {deleteConfirmBatch.quantityRemaining}</p>
+                    <p><strong>Expiry Date:</strong> {formatDate(deleteConfirmBatch.expiryDate)}</p>
+                    <p><strong>Status:</strong> 
+                      <span className={`ml-1 inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${getExpiryStatus(deleteConfirmBatch).color}`}>
+                        {getExpiryStatus(deleteConfirmBatch).status}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-center space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteConfirmBatch(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => handleDeleteBatch(deleteConfirmBatch.id)}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Delete Batch
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Deactivate Confirmation Modal */}
+      {showBulkDeactivateConfirm && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={() => setShowBulkDeactivateConfirm(false)}></div>
+            </div>
+            
+            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+              {/* Warning Icon */}
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+
+              {/* Modal Content */}
+              <div className="text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Deactivate All Expired Batches
+                </h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Are you sure you want to deactivate all {expiredBatchesCount} expired batch{expiredBatchesCount !== 1 ? 'es' : ''}? 
+                  This action will mark them as inactive and they will no longer appear in active inventory listings.
+                </p>
+                
+                {/* Warning Notice */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4 text-left">
+                  <div className="flex">
+                    <svg className="w-5 h-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <h4 className="font-medium text-yellow-800 mb-1">What will happen:</h4>
+                      <ul className="text-sm text-yellow-700 space-y-1">
+                        <li>• All expired batches will be marked as inactive</li>
+                        <li>• They will be removed from active inventory counts</li>
+                        <li>• Historical records will be preserved</li>
+                        <li>• This action cannot be easily undone</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-red-50 rounded-lg p-3 mb-4">
+                  <div className="flex items-center justify-center">
+                    <svg className="w-5 h-5 text-red-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span className="text-sm font-medium text-red-800">
+                      {expiredBatchesCount} expired batch{expiredBatchesCount !== 1 ? 'es' : ''} will be deactivated
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-center space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowBulkDeactivateConfirm(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleBulkDeactivateExpired}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Deactivate All Expired ({expiredBatchesCount})
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

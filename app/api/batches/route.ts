@@ -227,3 +227,84 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// PATCH - Bulk operations (e.g., deactivate expired batches)
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getSession();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { action } = body;
+
+    if (action === 'deactivate-expired') {
+      // Find all expired batches that are currently active
+      const expiredBatches = await prisma.batch.findMany({
+        where: {
+          isActive: true,
+          expiryDate: {
+            lt: new Date() // Less than current date = expired
+          }
+        },
+        include: {
+          inventory: {
+            select: {
+              itemName: true,
+              barcode: true
+            }
+          },
+          warehouse: {
+            select: {
+              warehouseName: true
+            }
+          }
+        }
+      });
+
+      if (expiredBatches.length === 0) {
+        return NextResponse.json({ 
+          message: 'No expired batches found',
+          deactivatedCount: 0,
+          batches: []
+        });
+      }
+
+      // Deactivate all expired batches
+      const result = await prisma.batch.updateMany({
+        where: {
+          isActive: true,
+          expiryDate: {
+            lt: new Date()
+          }
+        },
+        data: {
+          isActive: false
+        }
+      });
+
+      return NextResponse.json({
+        message: `Successfully deactivated ${result.count} expired batch${result.count !== 1 ? 'es' : ''}`,
+        deactivatedCount: result.count,
+        batches: expiredBatches.map(batch => ({
+          id: batch.id,
+          batchNumber: batch.batchNumber,
+          itemName: batch.inventory.itemName,
+          barcode: batch.inventory.barcode,
+          warehouseName: batch.warehouse.warehouseName,
+          expiryDate: batch.expiryDate
+        }))
+      });
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+
+  } catch (error) {
+    console.error('Error in bulk operation:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
