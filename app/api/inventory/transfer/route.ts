@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { decimalToNumber, decimalCompare } from "@/lib/decimal-utils";
 import { notifyStockAlert } from "@/lib/mailer";
 
 export const runtime = "nodejs";
@@ -78,8 +79,8 @@ export async function POST(req: Request) {
       }
 
       // Check if sufficient stock available (using converted quantity)
-      if (sourceInv.stockQty < finalQuantity) {
-        throw new Error(`Insufficient stock. Available: ${sourceInv.stockQty} ${sourceInv.unit}, Requested: ${finalQuantity} ${sourceInv.unit} (converted from ${absQty} ${inputUnit || sourceInv.unit})`);
+      if (decimalCompare(sourceInv.stockQty, finalQuantity).isLess) {
+        throw new Error(`Insufficient stock. Available: ${decimalToNumber(sourceInv.stockQty)} ${sourceInv.unit}, Requested: ${finalQuantity} ${sourceInv.unit} (converted from ${absQty} ${inputUnit || sourceInv.unit})`);
       }
 
       // Find or create destination inventory
@@ -144,7 +145,7 @@ export async function POST(req: Request) {
       });
 
       // Check for low stock alerts on source warehouse
-      if (updatedSource.stockAlertLevel > 0 && updatedSource.stockQty <= updatedSource.stockAlertLevel) {
+      if (decimalToNumber(updatedSource.stockAlertLevel) > 0 && decimalCompare(updatedSource.stockQty, updatedSource.stockAlertLevel).isLessOrEqual) {
         const alertExists = await db.alertLog.findFirst({
           where: {
             alertType: "low_stock",
@@ -157,8 +158,8 @@ export async function POST(req: Request) {
           await db.alertLog.create({
             data: {
               alertType: "low_stock",
-              priorityLevel: updatedSource.stockQty <= 0 ? "high" : "medium",
-              message: `Low stock after transfer: ${updatedSource.itemName} (${updatedSource.barcode}) at ${updatedSource.warehouseName} — ${updatedSource.stockQty} <= alert ${updatedSource.stockAlertLevel}`,
+              priorityLevel: decimalCompare(updatedSource.stockQty, 0).isLessOrEqual ? "high" : "medium",
+              message: `Low stock after transfer: ${updatedSource.itemName} (${updatedSource.barcode}) at ${updatedSource.warehouseName} — ${decimalToNumber(updatedSource.stockQty)} <= alert ${decimalToNumber(updatedSource.stockAlertLevel)}`,
               inventoryId: updatedSource.id,
             },
           });
@@ -170,8 +171,8 @@ export async function POST(req: Request) {
             if (recipients.length) {
               await notifyStockAlert(recipients, {
                 type: "low_stock",
-                priority: updatedSource.stockQty <= 0 ? "high" : "medium",
-                message: `Low stock after transfer: ${updatedSource.itemName} (${updatedSource.barcode}) at ${updatedSource.warehouseName} — ${updatedSource.stockQty} <= alert ${updatedSource.stockAlertLevel}`,
+                priority: decimalCompare(updatedSource.stockQty, 0).isLessOrEqual ? "high" : "medium",
+                message: `Low stock after transfer: ${updatedSource.itemName} (${updatedSource.barcode}) at ${updatedSource.warehouseName} — ${decimalToNumber(updatedSource.stockQty)} <= alert ${decimalToNumber(updatedSource.stockAlertLevel)}`,
                 inventory: {
                   itemName: updatedSource.itemName,
                   barcode: updatedSource.barcode,

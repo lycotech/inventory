@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AccessControl } from "@/components/access-control";
+import { PrivilegeAssignment } from "@/components/privilege-assignment";
 
 type UserRow = {
   id: number;
@@ -82,6 +83,12 @@ function CreateUserCard() {
   const [role, setRole] = useState("manager");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [showPrivileges, setShowPrivileges] = useState(false);
+  const [privileges, setPrivileges] = useState<{
+    menuPermissions: { [key: string]: boolean };
+    warehouseAccess: { [key: string]: { canView: boolean; canEdit: boolean; canTransfer: boolean } };
+    operationPrivileges: { [key: string]: boolean };
+  } | null>(null);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,14 +98,22 @@ function CreateUserCard() {
       const res = await fetch("/api/users/create", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ username, email, password, role }),
+        body: JSON.stringify({ 
+          username, 
+          email, 
+          password, 
+          role,
+          ...(privileges || {})
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to create user");
-      setMsg("User created");
+      setMsg("User created successfully with privileges");
       setUsername("");
       setEmail("");
       setPassword("");
+      setShowPrivileges(false);
+      setPrivileges(null);
       // notify list to refresh
       window.dispatchEvent(new CustomEvent("users:changed"));
     } catch (e: any) {
@@ -170,6 +185,25 @@ function CreateUserCard() {
           </div>
         </div>
         
+        {/* Privilege Assignment Toggle */}
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <button
+            type="button"
+            onClick={() => setShowPrivileges(!showPrivileges)}
+            className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            <svg 
+              className={`w-4 h-4 transition-transform ${showPrivileges ? 'rotate-90' : ''}`} 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            {showPrivileges ? 'Hide' : 'Configure'} User Privileges
+          </button>
+        </div>
+        
         <div className="flex items-center justify-between pt-2">
           <Button 
             type="submit" 
@@ -192,6 +226,15 @@ function CreateUserCard() {
           )}
         </div>
       </form>
+      
+      {/* Privilege Assignment Panel */}
+      {showPrivileges && (
+        <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+          <PrivilegeAssignment
+            onPrivilegesChange={setPrivileges}
+          />
+        </div>
+      )}
     </div>
   );
 }

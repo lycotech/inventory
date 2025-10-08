@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { decimalToNumber, decimalCompare, decimalArithmetic } from '@/lib/decimal-utils';
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -96,15 +97,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate new quantity
-    let newQuantity = batch.quantityRemaining;
+    let newQuantity = decimalToNumber(batch.quantityRemaining);
     switch (transactionType) {
       case 'receive':
-        newQuantity += quantity;
+        newQuantity = decimalArithmetic(batch.quantityRemaining, 'add', quantity);
         break;
       case 'issue':
       case 'transfer':
       case 'stock_out':
-        newQuantity -= quantity;
+        newQuantity = decimalArithmetic(batch.quantityRemaining, 'subtract', quantity);
         break;
       case 'adjustment':
         // For adjustments, quantity can be positive or negative

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { decimalToNumber, decimalCompare } from "@/lib/decimal-utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -62,9 +63,10 @@ export async function POST(req: Request) {
         const currentQty = item.stockQty;
         
         // Create audit transaction with appropriate reason
-        const adjustmentReason = currentQty > 0 
+        const qtyComparison = decimalCompare(currentQty, 0);
+        const adjustmentReason = qtyComparison.isGreater
           ? `${reason || 'Stock quantity reset to zero'} - Positive stock adjustment`
-          : currentQty < 0 
+          : qtyComparison.isLess
           ? `${reason || 'Stock quantity reset to zero'} - Negative stock correction`
           : `${reason || 'Stock quantity reset to zero'} - Administrative adjustment`;
           
@@ -91,7 +93,7 @@ export async function POST(req: Request) {
           barcode: item.barcode,
           itemName: item.itemName,
           warehouseName: item.warehouseName,
-          previousQty: currentQty,
+          previousQty: decimalToNumber(currentQty),
           newQty: 0
         });
         

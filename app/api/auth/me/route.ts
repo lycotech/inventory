@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, getSessionWithPrivileges } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ authenticated: false }, { status: 200 });
-  return NextResponse.json({ authenticated: true, user: session.user });
+  const sessionWithPrivileges = await getSessionWithPrivileges();
+  if (!sessionWithPrivileges) return NextResponse.json({ authenticated: false }, { status: 200 });
+  
+  return NextResponse.json({ 
+    authenticated: true, 
+    user: sessionWithPrivileges.user,
+    privileges: sessionWithPrivileges.privileges || null
+  });
 }
 
 export async function HEAD() {

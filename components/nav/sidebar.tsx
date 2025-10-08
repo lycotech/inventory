@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -51,12 +51,136 @@ const items: NavItem[] = [
   { label: "Setting", href: "/dashboard/settings", icon: Settings },
 ];
 
+// Helper function to check menu access (moved outside component)
+function checkMenuAccess(
+  userRole: string | null,
+  userPrivileges: { menuPermissions: { [key: string]: boolean } } | null,
+  menuKey: string
+): boolean {
+  // Admin has access to everything by default
+  if (userRole === "admin") return true;
+
+  // For other roles, check specific privileges
+  if (userPrivileges?.menuPermissions) {
+    return userPrivileges.menuPermissions[menuKey] === true;
+  }
+
+  // If no privileges loaded yet, use role-based fallback
+  if (userRole === "manager") {
+    return !["users", "settings", "backup", "logs"].includes(menuKey);
+  } else if (userRole === "user") {
+    return ["dashboard", "inventory", "alerts", "reports", "stock_aging"].includes(menuKey);
+  }
+
+  return false;
+}
+
+// Helper function to filter items (moved outside component)
+function filterNavItems(
+  userRole: string | null,
+  userPrivileges: {
+    menuPermissions: { [key: string]: boolean };
+    operationPrivileges: { [key: string]: boolean };
+  } | null
+): NavItem[] {
+  const filteredItems: NavItem[] = [];
+
+  // Dashboard
+  if (checkMenuAccess(userRole, userPrivileges, "dashboard")) {
+    filteredItems.push({ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard });
+  }
+
+  // Inventory with sub-items based on privileges
+  if (checkMenuAccess(userRole, userPrivileges, "inventory")) {
+    const inventoryChildren: { label: string; href: string }[] = [];
+
+    // Stock Items - basic read access
+    if (checkMenuAccess(userRole, userPrivileges, "inventory")) {
+      inventoryChildren.push({ label: "Stock Items", href: "/dashboard/inventory/stock-items" });
+    }
+
+    // Manage Stock - requires inventory management privileges
+    if (checkMenuAccess(userRole, userPrivileges, "inventory") && 
+        (userRole === "admin" || userRole === "manager" || userPrivileges?.operationPrivileges?.update)) {
+      inventoryChildren.push({ label: "Manage Stock", href: "/dashboard/inventory" });
+    }
+
+    // Batch Management
+    if (checkMenuAccess(userRole, userPrivileges, "batches")) {
+      inventoryChildren.push({ label: "Batch Management", href: "/dashboard/batches" });
+    }
+
+    // Stock Out - requires stock adjustment privileges
+    if (userRole === "admin" || userRole === "manager" || userPrivileges?.operationPrivileges?.adjust_stock) {
+      inventoryChildren.push({ label: "Stock Out", href: "/dashboard/inventory/stock-out" });
+    }
+
+    // Warehouse Transfer
+    if (checkMenuAccess(userRole, userPrivileges, "warehouse_transfer")) {
+      inventoryChildren.push({ label: "Warehouse Management", href: "/dashboard/warehouse-transfer" });
+    }
+
+    if (inventoryChildren.length > 0) {
+      filteredItems.push({
+        label: "Inventory",
+        icon: Boxes,
+        children: inventoryChildren,
+      });
+    }
+  }
+
+  // Import Data
+  if (checkMenuAccess(userRole, userPrivileges, "import")) {
+    filteredItems.push({ label: "Import Data", href: "/dashboard/import", icon: FileUp });
+  }
+
+  // Alerts
+  if (checkMenuAccess(userRole, userPrivileges, "alerts")) {
+    filteredItems.push({ label: "Alert", href: "/dashboard/alerts", icon: Bell });
+  }
+
+  // Reports
+  if (checkMenuAccess(userRole, userPrivileges, "reports")) {
+    filteredItems.push({ label: "Report", href: "/dashboard/reports", icon: BarChart3 });
+  }
+
+  // Stock Aging
+  if (checkMenuAccess(userRole, userPrivileges, "stock_aging")) {
+    filteredItems.push({ label: "Stock Aging", href: "/dashboard/stock-aging", icon: BarChart3 });
+  }
+
+  // Users (admin only by default, or specific privilege)
+  if (checkMenuAccess(userRole, userPrivileges, "users")) {
+    filteredItems.push({ label: "Users", href: "/dashboard/users", icon: Users });
+  }
+
+  // Backup
+  if (checkMenuAccess(userRole, userPrivileges, "backup")) {
+    filteredItems.push({ label: "Backup", href: "/dashboard/backup", icon: Database });
+  }
+
+  // Profile (always visible for logged in users)
+  filteredItems.push({ label: "Profile", href: "/dashboard/profile", icon: User });
+
+  // Settings
+  if (checkMenuAccess(userRole, userPrivileges, "settings")) {
+    filteredItems.push({ label: "Setting", href: "/dashboard/settings", icon: Settings });
+  }
+
+  return filteredItems;
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const [appName, setAppName] = useState<string>("InvAlert");
   const [logoUrl, setLogoUrl] = useState<string>("");
   const [logoErr, setLogoErr] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userPrivileges, setUserPrivileges] = useState<{
+    menuPermissions: { [key: string]: boolean };
+    warehouseAccess: { [key: string]: { canView: boolean; canEdit: boolean; canTransfer: boolean } };
+    operationPrivileges: { [key: string]: boolean };
+  } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -80,36 +204,38 @@ export function Sidebar() {
         if (r.ok) {
           const data = await r.json();
           setUserRole(data?.user?.role || null);
+          setUserPrivileges(data?.privileges || null);
         }
       } catch {}
     })();
   }, []);
 
-  // Filter items based on user role
-  const getFilteredItems = (): NavItem[] => {
-    if (userRole === "user") {
-      // Basic access users can only see: Dashboard, Inventory (Stock Items only), Alert, Report, Stock Aging
-      return [
-        { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-        {
-          label: "Inventory",
-          icon: Boxes,
-          children: [
-            { label: "Stock Items", href: "/dashboard/inventory/stock-items" },
-          ],
-        },
-        { label: "Alert", href: "/dashboard/alerts", icon: Bell },
-        { label: "Report", href: "/dashboard/reports", icon: BarChart3 },
-        { label: "Stock Aging", href: "/dashboard/stock-aging", icon: BarChart3 },
-        { label: "Profile", href: "/dashboard/profile", icon: User },
-      ];
-    }
-    
-    // Admin and manager users see all items
-    return items;
-  };
+  // Memoize filtered items to prevent unnecessary re-renders and hook order issues
+  const filteredItems = useMemo(() => {
+    return filterNavItems(userRole, userPrivileges);
+  }, [userRole, userPrivileges]);
 
-  const filteredItems = getFilteredItems();
+  // State for managing group expansions - must be at component level
+  const [groupOpenState, setGroupOpenState] = useState<{ [key: string]: boolean }>({});
+
+  // Initialize group open states based on current path
+  useEffect(() => {
+    const initialState: { [key: string]: boolean } = {};
+    filteredItems.forEach((item) => {
+      if ('children' in item && item.children) {
+        const openDefault = pathname?.startsWith("/dashboard/inventory") && item.label === "Inventory";
+        initialState[item.label] = openDefault;
+      }
+    });
+    setGroupOpenState(initialState);
+  }, [filteredItems, pathname]);
+
+  const toggleGroup = (groupLabel: string) => {
+    setGroupOpenState(prev => ({
+      ...prev,
+      [groupLabel]: !prev[groupLabel]
+    }));
+  };
 
   return (
     <aside className="h-screen sticky top-0 w-64 hidden md:flex md:flex-col bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-800/50 shadow-xl">
@@ -170,14 +296,13 @@ export function Sidebar() {
             );
           }
           const group = item as Extract<NavItem, { children: any }>;
-          const openDefault = pathname?.startsWith("/dashboard/inventory");
-          const [open, setOpen] = useState<boolean>(openDefault);
+          const open = groupOpenState[group.label] || false;
           const anyActive = group.children.some((c) => pathname?.startsWith(c.href));
           return (
             <div key={group.label} className="space-y-2">
               <button
                 type="button"
-                onClick={() => setOpen((v) => !v)}
+                onClick={() => toggleGroup(group.label)}
                 className={cn(
                   "w-full flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 group",
                   anyActive 

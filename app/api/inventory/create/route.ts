@@ -88,7 +88,7 @@ export async function POST(req: Request) {
         itemName: itemName.trim(),
         searchCode: finalSearchCode,
         warehouseName: warehouseName.trim(),
-        stockQty: parseInt(stockQty) || 0,
+        stockQty: parseFloat(stockQty) || 0,
         stockAlertLevel: parseInt(stockAlertLevel) || 0,
         unit: unit?.trim() || 'piece',
         baseUnit: baseUnit?.trim() || 'piece',

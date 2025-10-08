@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { decimalToNumber, decimalCompare } from "@/lib/decimal-utils";
 
 async function resetStockQuantities() {
   console.log("🔄 Starting stock quantity reset to zero...");
@@ -34,8 +35,8 @@ async function resetStockQuantities() {
       return;
     }
     
-    const positiveItems = inventoryItems.filter(item => item.stockQty > 0);
-    const negativeItems = inventoryItems.filter(item => item.stockQty < 0);
+    const positiveItems = inventoryItems.filter(item => decimalCompare(item.stockQty, 0).isGreater);
+    const negativeItems = inventoryItems.filter(item => decimalCompare(item.stockQty, 0).isLess);
     
     console.log(`Found ${inventoryItems.length} items with non-zero quantities:`);
     console.log(`  - ${positiveItems.length} items with positive stock`);
@@ -66,9 +67,9 @@ async function resetStockQuantities() {
       const currentQty = item.stockQty;
       
       // Create an "adjustment" transaction record for audit trail
-      const reason = currentQty > 0 
+      const reason = decimalCompare(currentQty, 0).isGreater
         ? 'Stock quantity reset to zero - Positive stock adjustment'
-        : currentQty < 0 
+        : decimalCompare(currentQty, 0).isLess
         ? 'Stock quantity reset to zero - Negative stock correction'
         : 'Stock quantity reset to zero - Administrative adjustment';
         

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import * as XLSX from "xlsx";
+import { decimalToNumber, decimalCompare } from "@/lib/decimal-utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -108,7 +109,13 @@ export async function POST(req: Request) {
   const errors: { row: number; message: string }[] = [];
   let successful = 0;
 
-  // Helper to get str -> number or default
+  // Helper to get str -> number or default (supports decimals)
+  const toFloat = (v: any, def = 0) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : def;
+  };
+
+  // Legacy function for integer values (like IDs, counts)
   const toInt = (v: any, def = 0) => {
     const n = Number(v);
     return Number.isFinite(n) ? Math.trunc(n) : def;
@@ -168,7 +175,7 @@ export async function POST(req: Request) {
           itemName: String(getVal(row, "itemName") || "").trim(),
           searchCode: String(getVal(row, "searchCode") || "").trim(),
           warehouseName,
-          stockQty: toInt(getVal(row, "stockQty"), 0),
+          stockQty: toFloat(getVal(row, "stockQty"), 0),
           stockAlertLevel: toInt(getVal(row, "stockAlertLevel"), 0),
           unit: String(getVal(row, "unit") || "piece").trim(),
           baseUnit: String(getVal(row, "baseUnit") || getVal(row, "unit") || "piece").trim(),
@@ -235,7 +242,7 @@ export async function POST(req: Request) {
         const barcode = String(getVal(row, "barcode") || "").trim();
         const warehouseName = String(getVal(row, "warehouseName") || "").trim();
         const batchNumber = String(getVal(row, "batchNumber") || "").trim();
-        const quantityReceived = toInt(getVal(row, "quantityReceived"));
+        const quantityReceived = toFloat(getVal(row, "quantityReceived"));
         const expiryDate = parseExpireDate(getVal(row, "expiryDate"));
         
         if (!barcode) throw new Error("barcode is required");
@@ -296,10 +303,10 @@ export async function POST(req: Request) {
       } else if (importType === "stock_receive" || importType === "stock_issue" || importType === "adjustment" || importType === "stock_out") {
         const barcode = String(getVal(row, "barcode") || "").trim();
         const warehouseName = String(getVal(row, "warehouseName") || "").trim();
-        const qty = toInt(getVal(row, "quantity"));
+        const qty = toFloat(getVal(row, "quantity"));
         if (!barcode) throw new Error("barcode is required");
         if (!warehouseName) throw new Error("warehouseName is required");
-        if (!qty) throw new Error("quantity is required");
+        if (!qty || qty <= 0) throw new Error("quantity is required and must be > 0");
         
         // Get full inventory item with unit information
         const inventory = await prisma.inventory.findUnique({ 
@@ -370,12 +377,12 @@ export async function POST(req: Request) {
         const barcode = String(getVal(row, "barcode") || "").trim();
         const fromWarehouse = String(getVal(row, "fromWarehouse") || "").trim();
         const toWarehouse = String(getVal(row, "toWarehouse") || "").trim();
-        const qty = toInt(getVal(row, "quantity"));
+        const qty = toFloat(getVal(row, "quantity"));
         
         if (!barcode) throw new Error("barcode is required");
         if (!fromWarehouse) throw new Error("fromWarehouse is required");
         if (!toWarehouse) throw new Error("toWarehouse is required");
-        if (!qty) throw new Error("quantity is required");
+        if (!qty || qty <= 0) throw new Error("quantity is required and must be > 0");
         if (fromWarehouse === toWarehouse) throw new Error("fromWarehouse and toWarehouse must be different");
 
         // Check source inventory exists and has sufficient stock
@@ -383,7 +390,8 @@ export async function POST(req: Request) {
           where: { barcode_warehouse: { barcode, warehouseName: fromWarehouse } } 
         });
         if (!sourceInv) throw new Error(`source inventory not found for ${barcode} in warehouse ${fromWarehouse}`);
-        if (sourceInv.stockQty < Math.abs(qty)) throw new Error(`insufficient stock. Available: ${sourceInv.stockQty}, Required: ${Math.abs(qty)}`);
+        const stockComparison = decimalCompare(sourceInv.stockQty, Math.abs(qty));
+        if (stockComparison.isLess) throw new Error(`insufficient stock. Available: ${decimalToNumber(sourceInv.stockQty)}, Required: ${Math.abs(qty)}`);
 
         // Find or create destination inventory
         let destInv = await prisma.inventory.findUnique({

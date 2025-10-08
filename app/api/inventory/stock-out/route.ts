@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { decimalToNumber, decimalCompare } from "@/lib/decimal-utils";
 import { notifyStockAlert } from "@/lib/mailer";
 
 export const runtime = "nodejs";
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
 
   const absQty = Math.abs(quantity!);
   
-  if (inv.stockQty - absQty < 0) {
+  if (decimalCompare(inv.stockQty, absQty).isLess) {
     // Create a negative stock alert log regardless
     try {
       const created = await prisma.alertLog.create({
@@ -100,12 +101,12 @@ export async function POST(req: Request) {
     
     // Low stock alert if we crossed threshold after stock out
     try {
-      if (updated.stockAlertLevel > 0 && updated.stockQty <= updated.stockAlertLevel) {
+      if (decimalToNumber(updated.stockAlertLevel) > 0 && decimalCompare(updated.stockQty, updated.stockAlertLevel).isLessOrEqual) {
         const createdLow = await db.alertLog.create({
           data: {
             alertType: "low_stock",
-            priorityLevel: updated.stockQty <= 0 ? "high" : "medium",
-            message: `Low stock after sale: ${updated.itemName} (${updated.barcode}) at ${updated.warehouseName} — ${updated.stockQty} <= alert ${updated.stockAlertLevel}`,
+            priorityLevel: decimalCompare(updated.stockQty, 0).isLessOrEqual ? "high" : "medium",
+            message: `Low stock after sale: ${updated.itemName} (${updated.barcode}) at ${updated.warehouseName} — ${decimalToNumber(updated.stockQty)} <= alert ${decimalToNumber(updated.stockAlertLevel)}`,
             inventoryId: updated.id,
             acknowledged: false,
           },

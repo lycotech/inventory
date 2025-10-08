@@ -87,3 +87,91 @@ export async function authenticate(username: string, password: string) {
   prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } }).catch(() => {});
   return user;
 }
+
+export async function getSessionWithPrivileges() {
+  const session = await getSession();
+  if (!session) return null;
+
+  try {
+    const userWithPrivileges = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: {
+        menuPermissions: true,
+        warehouseAccess: true,
+        operationPrivileges: true
+      }
+    });
+
+    if (!userWithPrivileges) return null;
+
+    // Transform privileges into a more usable format
+    const menuPermissions: { [key: string]: boolean } = {};
+    userWithPrivileges.menuPermissions.forEach(perm => {
+      menuPermissions[perm.menuItem] = perm.canAccess;
+    });
+
+    const warehouseAccess: { [key: string]: { canView: boolean; canEdit: boolean; canTransfer: boolean } } = {};
+    userWithPrivileges.warehouseAccess.forEach(access => {
+      warehouseAccess[access.warehouseName] = {
+        canView: access.canView,
+        canEdit: access.canEdit,
+        canTransfer: access.canTransfer
+      };
+    });
+
+    const operationPrivileges: { [key: string]: boolean } = {};
+    userWithPrivileges.operationPrivileges.forEach(priv => {
+      operationPrivileges[priv.operation] = priv.hasAccess;
+    });
+
+    return {
+      ...session,
+      privileges: {
+        menuPermissions,
+        warehouseAccess,
+        operationPrivileges
+      }
+    };
+  } catch (error) {
+    console.error("Error fetching session with privileges:", error);
+    // Return session with empty privileges if fetch fails
+    return {
+      ...session,
+      privileges: {
+        menuPermissions: {},
+        warehouseAccess: {},
+        operationPrivileges: {}
+      }
+    };
+  }
+}
+
+// Utility function to check if user has specific privilege
+export async function hasPrivilege(userId: number, type: 'menu' | 'warehouse' | 'operation', key: string, permission?: string): Promise<boolean> {
+  try {
+    if (type === 'menu') {
+      const menuPerm = await prisma.userMenuPermission.findUnique({
+        where: { userId_menuItem: { userId, menuItem: key as any } }
+      });
+      return menuPerm?.canAccess || false;
+    } else if (type === 'warehouse' && permission) {
+      const warehousePerm = await prisma.userWarehouseAccess.findUnique({
+        where: { userId_warehouseName: { userId, warehouseName: key } }
+      });
+      if (!warehousePerm) return false;
+      if (permission === 'canView') return warehousePerm.canView;
+      if (permission === 'canEdit') return warehousePerm.canEdit;
+      if (permission === 'canTransfer') return warehousePerm.canTransfer;
+      return false;
+    } else if (type === 'operation') {
+      const operationPerm = await prisma.userOperationPrivilege.findUnique({
+        where: { userId_operation: { userId, operation: key as any } }
+      });
+      return operationPerm?.hasAccess || false;
+    }
+    return false;
+  } catch (error) {
+    console.error("Error checking privilege:", error);
+    return false;
+  }
+}

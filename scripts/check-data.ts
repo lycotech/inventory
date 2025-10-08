@@ -41,7 +41,7 @@ async function checkData() {
         }
       });
       console.log(`📦 Sample Inventory Items:`);
-      sampleItems.forEach((item: { itemName: string; stockQty: number; warehouseName: string }) => {
+      sampleItems.forEach((item) => {
         console.log(`   - ${item.itemName} (Qty: ${item.stockQty}) @ ${item.warehouseName}`);
       });
     } else {
