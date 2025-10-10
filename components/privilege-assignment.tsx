@@ -16,11 +16,19 @@ interface PrivilegeAssignmentProps {
     warehouseAccess?: { [key: string]: { canView: boolean; canEdit: boolean; canTransfer: boolean } };
     operationPrivileges?: { [key: string]: boolean };
   };
+  onSave?: (privileges: {
+    menuPermissions: { [key: string]: boolean };
+    warehouseAccess: { [key: string]: { canView: boolean; canEdit: boolean; canTransfer: boolean } };
+    operationPrivileges: { [key: string]: boolean };
+  }) => Promise<void>;
+  onCancel?: () => void;
+  showActions?: boolean;
 }
 
-export function PrivilegeAssignment({ onPrivilegesChange, initialPrivileges }: PrivilegeAssignmentProps) {
+export function PrivilegeAssignment({ onPrivilegesChange, initialPrivileges, onSave, onCancel, showActions = false }: PrivilegeAssignmentProps) {
   const [warehouses, setWarehouses] = useState<{ id: number; warehouseName: string; location?: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   
   // Menu permissions state
   const [menuPermissions, setMenuPermissions] = useState<{ [key: string]: boolean }>({
@@ -87,18 +95,55 @@ export function PrivilegeAssignment({ onPrivilegesChange, initialPrivileges }: P
 
   // Load initial privileges if provided
   useEffect(() => {
-    if (initialPrivileges) {
+    if (initialPrivileges && warehouses.length > 0) {
       if (initialPrivileges.menuPermissions) {
-        setMenuPermissions(prev => ({ ...prev, ...initialPrivileges.menuPermissions }));
+        setMenuPermissions({
+          dashboard: false,
+          inventory: false,
+          batches: false,
+          alerts: false,
+          reports: false,
+          users: false,
+          settings: false,
+          backup: false,
+          logs: false,
+          warehouse_transfer: false,
+          stock_aging: false,
+          import: false,
+          ...initialPrivileges.menuPermissions
+        });
       }
+      
       if (initialPrivileges.warehouseAccess) {
-        setWarehouseAccess(prev => ({ ...prev, ...initialPrivileges.warehouseAccess }));
+        // Initialize warehouse access for all warehouses, then override with initial privileges
+        const warehouseAccessInit: { [key: string]: { canView: boolean; canEdit: boolean; canTransfer: boolean } } = {};
+        warehouses.forEach(wh => {
+          warehouseAccessInit[wh.warehouseName] = {
+            canView: false,
+            canEdit: false,
+            canTransfer: false
+          };
+        });
+        setWarehouseAccess({ ...warehouseAccessInit, ...initialPrivileges.warehouseAccess });
       }
+      
       if (initialPrivileges.operationPrivileges) {
-        setOperationPrivileges(prev => ({ ...prev, ...initialPrivileges.operationPrivileges }));
+        setOperationPrivileges({
+          create: false,
+          read: false,
+          update: false,
+          delete: false,
+          import: false,
+          export: false,
+          transfer: false,
+          adjust_stock: false,
+          reset_stock: false,
+          acknowledge_alerts: false,
+          ...initialPrivileges.operationPrivileges
+        });
       }
     }
-  }, [initialPrivileges]);
+  }, [initialPrivileges, warehouses]);
 
   // Notify parent when privileges change
   useEffect(() => {
@@ -262,6 +307,53 @@ export function PrivilegeAssignment({ onPrivilegesChange, initialPrivileges }: P
           ))}
         </div>
       </div>
+
+      {/* Save/Cancel Actions */}
+      {showActions && (onSave || onCancel) && (
+        <div className="flex items-center gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+          {onCancel && (
+            <Button
+              type="button"
+              onClick={onCancel}
+              disabled={saving}
+              className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 border-0"
+            >
+              Cancel
+            </Button>
+          )}
+          {onSave && (
+            <Button
+              type="button"
+              onClick={async () => {
+                if (saving) return;
+                setSaving(true);
+                try {
+                  await onSave({
+                    menuPermissions,
+                    warehouseAccess,
+                    operationPrivileges
+                  });
+                } catch (error) {
+                  console.error("Failed to save privileges:", error);
+                } finally {
+                  setSaving(false);
+                }
+              }}
+              disabled={saving}
+              className="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg shadow-green-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saving ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Saving...
+                </div>
+              ) : (
+                "Save Privileges"
+              )}
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

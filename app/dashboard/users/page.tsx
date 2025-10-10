@@ -374,6 +374,15 @@ function UserRowItem({ row }: { row: UserRow }) {
   const [pw, setPw] = useState("");
   const [pwSaving, setPwSaving] = useState(false);
   const [pwMsg, setPwMsg] = useState<string | null>(null);
+  const [showPrivileges, setShowPrivileges] = useState(false);
+  const [privileges, setPrivileges] = useState<any>(null);
+  const [loadingPrivileges, setLoadingPrivileges] = useState(false);
+  const [currentPrivileges, setCurrentPrivileges] = useState<any>(null);
+  const [privilegeSummary, setPrivilegeSummary] = useState<{
+    menuCount: number;
+    warehouseCount: number;
+    operationCount: number;
+  } | null>(null);
 
   const save = async (changes: Partial<{ role: UserRow["role"]; isActive: boolean }>) => {
     setSaving(true);
@@ -401,6 +410,196 @@ function UserRowItem({ row }: { row: UserRow }) {
       user: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white shadow-lg shadow-gray-500/25'
     };
     return colors[role as keyof typeof colors] || colors.user;
+  };
+
+  const applyRoleBasedPrivileges = async (userRole: string) => {
+    // Apply default privileges based on role
+    setSaving(true);
+    try {
+      // Get all warehouses first
+      const warehousesRes = await fetch('/api/warehouses/list');
+      const warehousesData = await warehousesRes.json();
+      const warehouses = warehousesData.warehouses || [];
+      
+      // Create warehouse access based on role
+      const warehouseAccess: any = {};
+      warehouses.forEach((wh: any) => {
+        switch (userRole) {
+          case 'admin':
+            warehouseAccess[wh.warehouseName] = { canView: true, canEdit: true, canTransfer: true };
+            break;
+          case 'manager':
+            warehouseAccess[wh.warehouseName] = { canView: true, canEdit: true, canTransfer: true };
+            break;
+          case 'user':
+            warehouseAccess[wh.warehouseName] = { canView: true, canEdit: false, canTransfer: false };
+            break;
+          default:
+            warehouseAccess[wh.warehouseName] = { canView: true, canEdit: false, canTransfer: false };
+        }
+      });
+
+      const res = await fetch(`/api/users/${row.id}/privileges`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          menuPermissions: getDefaultMenuPermissions(userRole),
+          warehouseAccess,
+          operationPrivileges: getDefaultOperationPrivileges(userRole)
+        })
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to apply role privileges");
+      loadPrivilegeSummary();
+      alert(`Successfully applied ${userRole} privileges to ${row.username}`);
+    } catch (e: any) {
+      console.error("Failed to apply role privileges:", e.message);
+      alert("Failed to apply role privileges: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getDefaultMenuPermissions = (userRole: string) => {
+    const baseMenus = { dashboard: true };
+    switch (userRole) {
+      case 'admin':
+        return {
+          ...baseMenus,
+          inventory: true,
+          batches: true,
+          alerts: true,
+          reports: true,
+          users: true,
+          settings: true,
+          backup: true,
+          logs: true,
+          warehouse_transfer: true,
+          stock_aging: true,
+          import: true
+        };
+      case 'manager':
+        return {
+          ...baseMenus,
+          inventory: true,
+          batches: true,
+          alerts: true,
+          reports: true,
+          warehouse_transfer: true,
+          stock_aging: true,
+          import: true
+        };
+      case 'user':
+        return {
+          ...baseMenus,
+          inventory: true,
+          alerts: true
+        };
+      default:
+        return baseMenus;
+    }
+  };
+
+  const getDefaultOperationPrivileges = (userRole: string) => {
+    const baseOps = { read: true };
+    switch (userRole) {
+      case 'admin':
+        return {
+          ...baseOps,
+          create: true,
+          update: true,
+          delete: true,
+          import: true,
+          export: true,
+          transfer: true,
+          adjust_stock: true,
+          reset_stock: true,
+          acknowledge_alerts: true
+        };
+      case 'manager':
+        return {
+          ...baseOps,
+          create: true,
+          update: true,
+          import: true,
+          export: true,
+          transfer: true,
+          adjust_stock: true,
+          acknowledge_alerts: true
+        };
+      case 'user':
+        return {
+          ...baseOps,
+          acknowledge_alerts: true
+        };
+      default:
+        return baseOps;
+    }
+  };
+
+  const loadPrivileges = async () => {
+    setLoadingPrivileges(true);
+    try {
+      const res = await fetch(`/api/users/${row.id}/privileges`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to load privileges");
+      setPrivileges(json.privileges);
+      setCurrentPrivileges(json.privileges); // Initialize current privileges
+      setShowPrivileges(true);
+    } catch (e: any) {
+      console.error("Failed to load privileges:", e.message);
+    } finally {
+      setLoadingPrivileges(false);
+    }
+  };
+
+  const loadPrivilegeSummary = async () => {
+    try {
+      const res = await fetch(`/api/users/${row.id}/privileges`);
+      const json = await res.json();
+      if (res.ok) {
+        const { menuPermissions, warehouseAccess, operationPrivileges } = json.privileges;
+        setPrivilegeSummary({
+          menuCount: Object.values(menuPermissions).filter(Boolean).length,
+          warehouseCount: Object.keys(warehouseAccess).length,
+          operationCount: Object.values(operationPrivileges).filter(Boolean).length
+        });
+      }
+    } catch (e) {
+      // Silent fail for summary
+    }
+  };
+
+  // Load privilege summary on mount
+  useEffect(() => {
+    loadPrivilegeSummary();
+  }, [row.id]);
+
+  const savePrivileges = async () => {
+    if (!currentPrivileges) {
+      alert("No privilege changes to save");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/users/${row.id}/privileges`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(currentPrivileges)
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to save privileges");
+      setShowPrivileges(false);
+      setPrivileges(null);
+      setCurrentPrivileges(null);
+      // Reload privilege summary
+      loadPrivilegeSummary();
+      // Trigger refresh of the user list
+      window.dispatchEvent(new CustomEvent("users:changed"));
+      alert("Privileges saved successfully!");
+    } catch (e: any) {
+      console.error("Failed to save privileges:", e.message);
+      alert("Failed to save privileges: " + e.message);
+    }
   };
 
   return (
@@ -431,6 +630,21 @@ function UserRowItem({ row }: { row: UserRow }) {
                 </>
               )}
             </div>
+            {privilegeSummary && (
+              <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center gap-1 text-xs">
+                  <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium">
+                    {privilegeSummary.menuCount} menus
+                  </span>
+                  <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-medium">
+                    {privilegeSummary.warehouseCount} warehouses
+                  </span>
+                  <span className="inline-flex items-center px-2 py-1 rounded-md bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium">
+                    {privilegeSummary.operationCount} operations
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         
@@ -505,6 +719,37 @@ function UserRowItem({ row }: { row: UserRow }) {
             )}
           </Button>
         </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => applyRoleBasedPrivileges(role)}
+            disabled={saving}
+            className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white shadow-lg shadow-green-500/25 disabled:opacity-50 disabled:cursor-not-allowed h-9 px-3 text-sm"
+          >
+            {saving ? (
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Setting up...
+              </div>
+            ) : (
+              "Quick Setup"
+            )}
+          </Button>
+          <Button
+            onClick={loadPrivileges}
+            disabled={loadingPrivileges}
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed h-9 px-4"
+          >
+            {loadingPrivileges ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Loading...
+              </div>
+            ) : (
+              "Edit Privileges"
+            )}
+          </Button>
+        </div>
         
         {saving && (
           <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
@@ -521,6 +766,74 @@ function UserRowItem({ row }: { row: UserRow }) {
             : 'text-red-600 dark:text-red-400'
         }`}>
           {pwMsg}
+        </div>
+      )}
+
+      {/* Privilege Assignment Modal */}
+      {showPrivileges && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 pb-20">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[75vh] flex flex-col border border-gray-200 dark:border-gray-700">
+            {/* Header */}
+            <div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                    Edit Privileges - {row.username}
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Configure menu access, warehouse permissions, and operation privileges
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowPrivileges(false);
+                    setPrivileges(null);
+                    setCurrentPrivileges(null);
+                  }}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <svg className="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6 min-h-0">
+              {privileges && (
+                <PrivilegeAssignment
+                  initialPrivileges={privileges}
+                  onPrivilegesChange={setCurrentPrivileges}
+                  showActions={false} // We'll handle buttons outside
+                />
+              )}
+            </div>
+            
+            {/* Fixed Footer with Actions - More Prominent */}
+            <div className="flex-shrink-0 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-t-2 border-gray-300 dark:border-gray-600 rounded-b-2xl">
+              <div className="flex items-center justify-end gap-4 p-6">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setShowPrivileges(false);
+                    setPrivileges(null);
+                    setCurrentPrivileges(null);
+                  }}
+                  className="px-8 py-3 text-base font-semibold bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 border-2 border-gray-300 dark:border-gray-600 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={savePrivileges}
+                  className="px-8 py-3 text-base font-semibold bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-xl shadow-green-500/40 rounded-lg transition-all duration-200 transform hover:scale-105 border-2 border-green-500"
+                >
+                  💾 Save Privileges
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
