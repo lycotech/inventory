@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AccessControl } from "@/components/access-control";
@@ -383,6 +384,11 @@ function UserRowItem({ row }: { row: UserRow }) {
     warehouseCount: number;
     operationCount: number;
   } | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const save = async (changes: Partial<{ role: UserRow["role"]; isActive: boolean }>) => {
     setSaving(true);
@@ -770,11 +776,11 @@ function UserRowItem({ row }: { row: UserRow }) {
       )}
 
       {/* Privilege Assignment Modal */}
-      {showPrivileges && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 pb-20">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[75vh] flex flex-col border border-gray-200 dark:border-gray-700">
+      {showPrivileges && mounted && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col border-4 border-green-500 dark:border-gray-700 relative z-[100000]">
             {/* Header */}
-            <div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-t-2xl">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -783,6 +789,12 @@ function UserRowItem({ row }: { row: UserRow }) {
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     Configure menu access, warehouse permissions, and operation privileges
                   </p>
+                  <div className="mt-2 flex items-center gap-2 text-xs text-green-600 dark:text-green-400 font-medium">
+                    <svg className="w-4 h-4 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                    Scroll down to save changes
+                  </div>
                 </div>
                 <button
                   onClick={() => {
@@ -800,7 +812,7 @@ function UserRowItem({ row }: { row: UserRow }) {
             </div>
             
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-6 min-h-0">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-0">
               {privileges && (
                 <PrivilegeAssignment
                   initialPrivileges={privileges}
@@ -811,8 +823,8 @@ function UserRowItem({ row }: { row: UserRow }) {
             </div>
             
             {/* Fixed Footer with Actions - More Prominent */}
-            <div className="flex-shrink-0 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-t-2 border-gray-300 dark:border-gray-600 rounded-b-2xl">
-              <div className="flex items-center justify-end gap-4 p-6">
+            <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-t-4 border-green-500 dark:border-green-400 rounded-b-2xl shadow-2xl">
+              <div className="flex flex-col sm:flex-row items-center justify-end gap-3 sm:gap-4 p-4 sm:p-6 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-800 dark:to-gray-700">
                 <Button
                   type="button"
                   onClick={() => {
@@ -820,21 +832,27 @@ function UserRowItem({ row }: { row: UserRow }) {
                     setPrivileges(null);
                     setCurrentPrivileges(null);
                   }}
-                  className="px-8 py-3 text-base font-semibold bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 border-2 border-gray-300 dark:border-gray-600 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                  className="w-full sm:w-auto px-6 sm:px-8 py-3 text-base font-semibold bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 border-2 border-gray-300 dark:border-gray-600 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="button"
                   onClick={savePrivileges}
-                  className="px-8 py-3 text-base font-semibold bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-xl shadow-green-500/40 rounded-lg transition-all duration-200 transform hover:scale-105 border-2 border-green-500"
+                  className="w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 text-lg sm:text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-2xl shadow-green-500/50 rounded-xl transition-all duration-200 transform hover:scale-110 border-4 border-white dark:border-gray-900 ring-4 ring-green-500 animate-pulse hover:animate-none"
                 >
-                  💾 Save Privileges
+                  <span className="flex items-center gap-2 justify-center">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                    SAVE PRIVILEGES
+                  </span>
                 </Button>
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
