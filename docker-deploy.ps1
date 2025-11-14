@@ -152,9 +152,9 @@ switch ($choice) {
         Write-Host ""
         $backupFile = "backup_$(Get-Date -Format 'yyyyMMdd_HHmmss').sql"
         Write-Host "Creating database backup: $backupFile" -ForegroundColor Yellow
+        Write-Host "Note: You will be prompted for the MySQL root password" -ForegroundColor Yellow
         
-        $password = Read-Host "Enter MYSQL_ROOT_PASSWORD from .env.docker"
-        docker compose exec -T db mysqldump -u root -p$password westgatedb | Out-File -FilePath $backupFile -Encoding utf8
+        docker compose exec -T db mysqldump -u root -p westgatedb | Out-File -FilePath $backupFile -Encoding utf8
         
         Write-Host "✓ Backup created: $backupFile" -ForegroundColor Green
     }
