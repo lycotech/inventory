@@ -1,29 +1,48 @@
 version: '3.9'
+
 services:
+  # MySQL Database Service
   db:
     image: mysql:8.0
+    container_name: inventory-mysql
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: femi
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_USER: femi
-      MYSQL_PASSWORD: femipass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-westgatedb}
+      MYSQL_USER: ${MYSQL_USER:-westuser}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-westpass}
     ports:
       - "3306:3306"
     volumes:
       - db-data:/var/lib/mysql
+    networks:
+      - inventory-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD:-rootpass}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
+  # Next.js Application Service
   app:
-    build: .
-    image: femi-app:latest
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: inventory-app
+    image: inventory-app:latest
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: mysql://femi:femipass@db:3306/femi
-  # On HTTP-only intranet, allow non-secure cookies; set to 'true' if serving via HTTPS
-  COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      DATABASE_URL: mysql://${MYSQL_USER:-westuser}:${MYSQL_PASSWORD:-westpass}@db:3306/${MYSQL_DATABASE:-westgatedb}
+      AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:-change-me-to-secure-random-secret}
+      SEED_ADMIN_USERNAME: ${SEED_ADMIN_USERNAME:-admin}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin123}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@example.com}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
       # SMTP (optional)
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
@@ -31,10 +50,20 @@ services:
       SMTP_PASS: ${SMTP_PASS}
       SMTP_FROM: ${SMTP_FROM}
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-3000}:3000"
     volumes:
       - app-data:/app/.next/cache
+      - ./uploads:/app/uploads
+    networks:
+      - inventory-network
+    command: sh -c "npx prisma migrate deploy && npx tsx scripts/seed.ts && node server.js"
 
 volumes:
   db-data:
+    driver: local
   app-data:
+    driver: local
+
+networks:
+  inventory-network:
+    driver: bridge
