@@ -6,8 +6,11 @@ Set the following environment variables in your Netlify dashboard:
 
 ### Database Configuration
 ```
-DATABASE_URL=mysql://cnbezvte_invalertuserner:Ci1.N5jo}UST@gator4410.hostgator.com:2083/cnbezvte_invalert
+DATABASE_URL=mysql://cnbezvte_westuser:%7E%7B3%24%28%2Bt%3FjBpA@gator4410.hostgator.com:3306/cnbezvte_westgatedb
 ```
+**Note:** Special characters in password are URL-encoded:
+- Original password: `~{3$(+t?jBpA`
+- URL-encoded: `%7E%7B3%24%28%2Bt%3FjBpA`
 
 ### Authentication Secret
 ```
