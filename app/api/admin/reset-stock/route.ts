@@ -56,51 +56,74 @@ export async function POST(req: Request) {
       newQty: number;
     }> = [];
     
-    // Use transaction to ensure data consistency
-    await prisma.$transaction(async (tx) => {
-      // Process each item
-      for (const item of inventoryItems) {
-        const currentQty = item.stockQty;
-        
-        // Create audit transaction with appropriate reason
-        const qtyComparison = decimalCompare(currentQty, 0);
-        const adjustmentReason = qtyComparison.isGreater
-          ? `${reason || 'Stock quantity reset to zero'} - Positive stock adjustment`
-          : qtyComparison.isLess
-          ? `${reason || 'Stock quantity reset to zero'} - Negative stock correction`
-          : `${reason || 'Stock quantity reset to zero'} - Administrative adjustment`;
+    // Process in batches of 100 to avoid transaction timeouts
+    const BATCH_SIZE = 100;
+    const totalBatches = Math.ceil(inventoryItems.length / BATCH_SIZE);
+    
+    console.log(`Processing ${inventoryItems.length} items in ${totalBatches} batches of ${BATCH_SIZE}...`);
+    
+    for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+      const start = batchIndex * BATCH_SIZE;
+      const end = Math.min(start + BATCH_SIZE, inventoryItems.length);
+      const batchItems = inventoryItems.slice(start, end);
+      
+      console.log(`Processing batch ${batchIndex + 1}/${totalBatches} (items ${start + 1}-${end})...`);
+      
+      // Process each batch in a separate transaction
+      await prisma.$transaction(async (tx) => {
+        for (const item of batchItems) {
+          const currentQty = item.stockQty;
           
-        await tx.stockTransaction.create({
-          data: {
-            inventoryId: item.id,
-            transactionType: 'adjustment',
-            quantity: -currentQty,
-            transactionDate: new Date(),
-            referenceDoc: `RESET-${new Date().toISOString().slice(0, 10)}`,
-            reason: adjustmentReason,
-            processedBy: session.user.id
+          // Create audit transaction with appropriate reason
+          const qtyComparison = decimalCompare(currentQty, 0);
+          const adjustmentReason = qtyComparison.isGreater
+            ? `${reason || 'Stock quantity reset to zero'} - Positive stock adjustment`
+            : qtyComparison.isLess
+            ? `${reason || 'Stock quantity reset to zero'} - Negative stock correction`
+            : `${reason || 'Stock quantity reset to zero'} - Administrative adjustment`;
+            
+          await tx.stockTransaction.create({
+            data: {
+              inventoryId: item.id,
+              transactionType: 'adjustment',
+              quantity: -currentQty,
+              transactionDate: new Date(),
+              referenceDoc: `RESET-${new Date().toISOString().slice(0, 10)}-B${batchIndex + 1}`,
+              reason: adjustmentReason,
+              processedBy: session.user.id
+            }
+          });
+          
+          // Reset quantity to zero
+          await tx.inventory.update({
+            where: { id: item.id },
+            data: { stockQty: 0 }
+          });
+          
+          if (resetItems.length < 10) {
+            // Only keep first 10 for display
+            resetItems.push({
+              id: item.id,
+              barcode: item.barcode,
+              itemName: item.itemName,
+              warehouseName: item.warehouseName,
+              previousQty: decimalToNumber(currentQty),
+              newQty: 0
+            });
           }
-        });
-        
-        // Reset quantity to zero
-        await tx.inventory.update({
-          where: { id: item.id },
-          data: { stockQty: 0 }
-        });
-        
-        resetItems.push({
-          id: item.id,
-          barcode: item.barcode,
-          itemName: item.itemName,
-          warehouseName: item.warehouseName,
-          previousQty: decimalToNumber(currentQty),
-          newQty: 0
-        });
-        
-        resetCount++;
-        transactionCount++;
-      }
-    });
+          
+          resetCount++;
+          transactionCount++;
+        }
+      }, {
+        maxWait: 10000, // 10 seconds max wait to start transaction
+        timeout: 60000, // 60 seconds transaction timeout
+      });
+      
+      console.log(`Batch ${batchIndex + 1}/${totalBatches} completed. Progress: ${resetCount}/${inventoryItems.length}`);
+    }
+    
+    console.log(`Stock reset completed. Total items reset: ${resetCount}`);
     
     // Verify the reset
     const remainingItemsWithStock = await prisma.inventory.count({

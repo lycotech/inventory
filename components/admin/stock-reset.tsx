@@ -87,16 +87,16 @@ export default function StockResetComponent({ onResetComplete }: StockResetProps
             <div className="text-xs text-muted-foreground">Total Items</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-green-600">{summary.itemsWithStock}</div>
-            <div className="text-xs text-muted-foreground">Items with Stock</div>
+            <div className="text-2xl font-bold text-green-600">{summary.itemsWithPositiveStock || 0}</div>
+            <div className="text-xs text-muted-foreground">Items with Positive Stock</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-600">{summary.itemsWithoutStock}</div>
-            <div className="text-xs text-muted-foreground">Items without Stock</div>
+            <div className="text-2xl font-bold text-red-600">{summary.itemsWithNegativeStock || 0}</div>
+            <div className="text-xs text-muted-foreground">Items with Negative Stock</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-blue-600">{summary.totalStockQuantity}</div>
-            <div className="text-xs text-muted-foreground">Total Stock Qty</div>
+            <div className="text-2xl font-bold text-gray-600">{summary.itemsWithZeroStock || 0}</div>
+            <div className="text-xs text-muted-foreground">Items with Zero Stock</div>
           </div>
         </div>
       )}
@@ -106,9 +106,9 @@ export default function StockResetComponent({ onResetComplete }: StockResetProps
           <Button 
             onClick={() => setShowConfirm(true)}
             variant="destructive"
-            disabled={!summary?.itemsWithStock || summary.itemsWithStock === 0}
+            disabled={!summary?.itemsWithNonZeroStock || summary.itemsWithNonZeroStock === 0}
           >
-            {summary?.itemsWithStock === 0 ? 'No Items with Stock to Reset' : 'Reset All Stock Quantities'}
+            {summary?.itemsWithNonZeroStock === 0 ? 'No Items with Stock to Reset' : 'Reset All Stock Quantities'}
           </Button>
           <Button 
             onClick={fetchSummary}
@@ -174,7 +174,7 @@ export default function StockResetComponent({ onResetComplete }: StockResetProps
           <div className="mt-2 text-sm space-y-1">
             <div>Items Reset: <strong>{result.resetCount}</strong></div>
             <div>Transactions Created: <strong>{result.transactionCount}</strong></div>
-            <div>Remaining Items with Stock: <strong>{result.remainingItemsWithStock}</strong></div>
+            <div>Remaining Items with Non-Zero Stock: <strong>{result.remainingItemsWithNonZeroStock || 0}</strong></div>
             <div>Completed: <strong>{new Date(result.timestamp).toLocaleString()}</strong></div>
           </div>
           {result.resetItems && result.resetItems.length > 0 && (

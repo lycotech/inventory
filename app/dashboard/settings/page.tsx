@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Settings, Palette, Bell, FileText, Upload, Image, Trash2 } from "lucide-react";
 import { AccessControl } from "@/components/access-control";
+import StockResetComponent from "@/components/admin/stock-reset";
 
 type SettingsMap = Record<string, any>;
 
@@ -374,6 +375,17 @@ function SettingsContent() {
             </label>
           </section>
         </div>
+      )}
+
+      {/* Stock Reset Section - Admin Only */}
+      {!loading && (
+        <section className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-red-200/50 dark:border-red-700/50 p-6 shadow-lg shadow-red-500/5">
+          <StockResetComponent 
+            onResetComplete={(result) => {
+              console.log('Stock reset completed:', result);
+            }} 
+          />
+        </section>
       )}
 
       <div className="flex items-center gap-4 pt-6 border-t border-gray-200/50 dark:border-gray-700/50">
