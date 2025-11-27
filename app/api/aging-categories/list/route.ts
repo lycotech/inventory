@@ -23,7 +23,7 @@ export async function GET() {
 
   try {
     const rows: any[] = await prisma.$queryRawUnsafe(
-      "SELECT id, categoryName as categoryName, minDays, maxDays, colorCode, priorityLevel, isActive FROM AgingCategory WHERE isActive = 1 ORDER BY minDays ASC"
+      "SELECT id, categoryName as categoryName, minDays, maxDays, colorCode, priorityLevel, isActive FROM agingcategory WHERE isActive = 1 ORDER BY minDays ASC"
     );
     return NextResponse.json({ categories: rows });
   } catch {

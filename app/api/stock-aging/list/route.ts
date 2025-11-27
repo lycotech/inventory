@@ -59,9 +59,9 @@ export async function GET(req: Request) {
       i.category,
       ac.categoryName as agingCategoryName,
       ac.colorCode as agingColor
-    FROM StockAging sa
-    JOIN Inventory i ON i.id = sa.inventoryId
-    LEFT JOIN AgingCategory ac ON ac.id = sa.agingCategoryId
+    FROM stockaging sa
+    JOIN inventory i ON i.id = sa.inventoryId
+    LEFT JOIN agingcategory ac ON ac.id = sa.agingCategoryId
     ${whereSql}
     ORDER BY sa.updatedAt DESC
     LIMIT ? OFFSET ?
@@ -69,8 +69,8 @@ export async function GET(req: Request) {
 
   const countSql = `
     SELECT COUNT(*) as cnt
-    FROM StockAging sa
-    JOIN Inventory i ON i.id = sa.inventoryId
+    FROM stockaging sa
+    JOIN inventory i ON i.id = sa.inventoryId
     ${whereSql}
   `;
 

@@ -29,7 +29,7 @@ export async function GET() {
   // Low stock (computed live)
   const lowRows = await prisma.$queryRaw<any[]>`
     SELECT id, itemName, barcode, warehouseName, stockQty, stockAlertLevel, expireDate, expireDateAlert
-    FROM Inventory
+    FROM inventory
     WHERE stockAlertLevel > 0 AND stockQty <= stockAlertLevel
   `;
 
@@ -37,7 +37,7 @@ export async function GET() {
   const expRows = await prisma.$queryRaw<any[]>`
     SELECT id, itemName, barcode, warehouseName, stockQty, stockAlertLevel, expireDate, expireDateAlert,
            DATEDIFF(expireDate, NOW()) AS daysLeft
-    FROM Inventory
+    FROM inventory
     WHERE expireDate IS NOT NULL
       AND expireDateAlert > 0
       AND DATEDIFF(expireDate, NOW()) <= expireDateAlert
@@ -58,9 +58,9 @@ export async function GET() {
       i.stockQty,
       i.stockAlertLevel,
       DATEDIFF(b.expiryDate, NOW()) AS daysLeft
-    FROM Batch b
-    JOIN Inventory i ON b.inventoryId = i.id
-    JOIN Warehouse w ON b.warehouseId = w.id
+    FROM batch b
+    JOIN inventory i ON b.inventoryId = i.id
+    JOIN warehouse w ON b.warehouseId = w.id
     WHERE b.expiryDate IS NOT NULL
       AND b.expireDateAlert > 0
       AND b.isActive = true
@@ -71,7 +71,7 @@ export async function GET() {
   // Negative stock (computed live)
   const negRows = await prisma.$queryRaw<any[]>`
     SELECT id, itemName, barcode, warehouseName, stockQty, stockAlertLevel, expireDate, expireDateAlert
-    FROM Inventory
+    FROM inventory
     WHERE stockQty < 0
   `;
 

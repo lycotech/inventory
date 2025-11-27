@@ -165,6 +165,8 @@ model User {
   menuPermissions     UserMenuPermission[]
   warehouseAccess     UserWarehouseAccess[]
   operationPrivileges UserOperationPrivilege[]
+  
+  @@map("user")
 }
 
 // User privilege system tables
@@ -238,6 +240,7 @@ model Inventory {
   batches          Batch[]
 
   @@unique([barcode, warehouseName], name: "barcode_warehouse")
+  @@map("inventory")
 }
 
 model Warehouse {
@@ -261,6 +264,8 @@ model Warehouse {
   batches         Batch[]
   batchTransfersFrom BatchTransaction[] @relation("BatchTransferFromWarehouse")
   batchTransfersTo   BatchTransaction[] @relation("BatchTransferToWarehouse")
+  
+  @@map("warehouse")
 }
 
 model StockTransaction {
@@ -283,6 +288,8 @@ model StockTransaction {
   processor        User            @relation("TxProcessedBy", fields: [processedBy], references: [id])
   fromWarehouse    Warehouse?      @relation("TransferFromWarehouse", fields: [fromWarehouseId], references: [id])
   toWarehouse      Warehouse?      @relation("TransferToWarehouse", fields: [toWarehouseId], references: [id])
+  
+  @@map("stocktransaction")
 }
 
 
@@ -297,6 +304,8 @@ model AgingCategory {
 
   // Relations
   stockAging     StockAging[]
+  
+  @@map("agingcategory")
 }
 
 model StockAging {
@@ -319,6 +328,7 @@ model StockAging {
 
   @@index([inventoryId])
   @@index([agingCategoryId])
+  @@map("stockaging")
 }
 
 model Batch {
@@ -351,6 +361,7 @@ model Batch {
   @@index([warehouseId])
   @@index([expiryDate])
   @@index([batchNumber])
+  @@map("batch")
 }
 
 model BatchTransaction {
@@ -374,6 +385,7 @@ model BatchTransaction {
 
   @@index([batchId])
   @@index([transactionDate])
+  @@map("batchtransaction")
 }
 
 enum BatchAlertType {
@@ -400,6 +412,7 @@ model BatchAlert {
   @@index([batchId])
   @@index([alertType])
   @@index([acknowledged])
+  @@map("batchalert")
 }
 
 model ImportHistory {
@@ -415,6 +428,8 @@ model ImportHistory {
 
   // Relations
   processor         User          @relation("ImportProcessedBy", fields: [processedBy], references: [id])
+  
+  @@map("importhistory")
 }
 
 model AlertLog {
@@ -431,6 +446,8 @@ model AlertLog {
   // Relations
   inventory       Inventory      @relation(fields: [inventoryId], references: [id])
   acknowledgedUser User?         @relation("AlertAcknowledgedBy", fields: [acknowledgedBy], references: [id])
+  
+  @@map("alertlog")
 }
 
 model UserSession {
@@ -442,6 +459,8 @@ model UserSession {
 
   // Relations
   user          User      @relation(fields: [userId], references: [id])
+  
+  @@map("usersession")
 }
 
 model Report {
@@ -459,6 +478,8 @@ model Report {
   // Relations
   creator          User        @relation("ReportCreatedBy", fields: [createdBy], references: [id])
   executions       ReportExecution[]
+  
+  @@map("report")
 }
 
 model ReportExecution {
@@ -475,6 +496,8 @@ model ReportExecution {
   // Relations
   report         Report?         @relation(fields: [reportId], references: [id])
   executor       User            @relation("ReportExecutedBy", fields: [executedBy], references: [id])
+  
+  @@map("reportexecution")
 }
 
 // Application key-value settings
@@ -483,4 +506,6 @@ model AppSetting {
   value     Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  @@map("appsetting")
 }

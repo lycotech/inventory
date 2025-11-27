@@ -84,10 +84,16 @@ export async function GET() {
     }));
 
     // Get low stock vs healthy stock for donut chart
-    const totalItems = await prisma.inventory.count();
+    // Count unique items (distinct barcodes)
+    const totalItemsRow = await prisma.$queryRaw<{ c: bigint }[]>`
+      SELECT COUNT(DISTINCT barcode) AS c
+      FROM inventory
+    `;
+    const totalItems = Number(totalItemsRow[0]?.c ?? 0);
+    
     const lowStockRow = await prisma.$queryRaw<{ c: bigint }[]>`
-      SELECT COUNT(*) AS c
-      FROM Inventory
+      SELECT COUNT(DISTINCT barcode) AS c
+      FROM inventory
       WHERE stockAlertLevel > 0 AND stockQty <= stockAlertLevel
     `;
     const lowStock = Number(lowStockRow[0]?.c ?? 0);

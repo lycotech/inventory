@@ -10,17 +10,21 @@ export async function GET() {
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
 
-  const [items, txToday] = await Promise.all([
-    prisma.inventory.count(),
-    prisma.stockTransaction.count({
-      where: { transactionDate: { gte: startOfDay, lt: endOfDay } },
-    }),
-  ]);
+  // Count unique items (distinct barcodes) instead of inventory records
+  const uniqueItemsRow = (await prisma.$queryRaw<{ c: bigint }[]>`
+    SELECT COUNT(DISTINCT barcode) AS c
+    FROM inventory
+  `)[0];
+  const items = Number(uniqueItemsRow?.c ?? 0);
+
+  const txToday = await prisma.stockTransaction.count({
+    where: { transactionDate: { gte: startOfDay, lt: endOfDay } },
+  });
 
   // low stock: stockQty <= stockAlertLevel and alert level > 0
   const lowStockRow = (await prisma.$queryRaw<{ c: bigint }[]>`
     SELECT COUNT(*) AS c
-    FROM Inventory
+    FROM inventory
     WHERE stockAlertLevel > 0 AND stockQty <= stockAlertLevel
   `)[0];
   const lowStock = Number(lowStockRow?.c ?? 0);
@@ -29,7 +33,7 @@ export async function GET() {
   // First check inventory table for items with expiry dates
   const expiringSoonInventoryRow = (await prisma.$queryRaw<{ c: bigint }[]>`
     SELECT COUNT(*) AS c
-    FROM Inventory
+    FROM inventory
     WHERE expireDate IS NOT NULL
       AND expireDateAlert > 0
       AND DATEDIFF(expireDate, NOW()) <= expireDateAlert
@@ -39,7 +43,7 @@ export async function GET() {
   // Check batches for expiring items (this is the main source now)
   const expiringSoonBatchesRow = (await prisma.$queryRaw<{ c: bigint }[]>`
     SELECT COUNT(*) AS c
-    FROM Batch
+    FROM batch
     WHERE expiryDate IS NOT NULL
       AND expireDateAlert > 0
       AND DATEDIFF(expiryDate, NOW()) <= expireDateAlert

@@ -59,7 +59,7 @@ export async function GET(req: Request) {
   } else if (type === "low_stock") {
     const raw: any[] = await prisma.$queryRaw`
       SELECT itemName, barcode, warehouseName as warehouse, category, stockQty as qty, stockAlertLevel as alert
-      FROM Inventory
+      FROM inventory
       WHERE stockAlertLevel > 0 AND stockQty <= stockAlertLevel
       ORDER BY itemName ASC
     `;
@@ -70,7 +70,7 @@ export async function GET(req: Request) {
     const days = Math.max(0, parseInt(String(url.searchParams.get("days") || "30")) || 30);
     const raw: any[] = await prisma.$queryRaw`
       SELECT itemName, barcode, warehouseName as warehouse, category, DATE_FORMAT(expireDate, '%Y-%m-%d') as expireDate, expireDateAlert
-      FROM Inventory
+      FROM inventory
       WHERE expireDate IS NOT NULL AND DATEDIFF(expireDate, NOW()) <= ${days}
       ORDER BY expireDate ASC
     `;
@@ -112,7 +112,7 @@ export async function GET(req: Request) {
         i.stockQty as qty,
         COALESCE(MAX(st.transactionDate), i.createdAt) as lastMovement,
         DATEDIFF(NOW(), COALESCE(MAX(st.transactionDate), i.createdAt)) as daysStagnant
-      FROM Inventory i
+      FROM inventory i
       LEFT JOIN StockTransaction st ON i.id = st.inventoryId
       GROUP BY i.id
       HAVING daysStagnant >= ${days}
@@ -128,7 +128,7 @@ export async function GET(req: Request) {
     const warehouseFilter = String(url.searchParams.get("warehouse") || "");
     let query = `
       SELECT itemName, barcode, warehouseName as warehouse, category, stockQty as qty, stockAlertLevel as alert
-      FROM Inventory
+      FROM inventory
       WHERE stockAlertLevel > 0 AND stockQty <= stockAlertLevel
     `;
     if (warehouseFilter) {
@@ -155,7 +155,7 @@ export async function GET(req: Request) {
         st.quantity,
         st.referenceDoc as reference,
         u.username as receivedBy
-      FROM StockTransaction st
+      FROM stocktransaction st
       JOIN Inventory i ON st.inventoryId = i.id
       JOIN User u ON st.processedBy = u.id
       WHERE st.transactionType = 'receive'
@@ -180,7 +180,7 @@ export async function GET(req: Request) {
         i.itemName,
         st.quantity,
         st.reason
-      FROM StockTransaction st
+      FROM stocktransaction st
       JOIN User u ON st.processedBy = u.id
       JOIN Inventory i ON st.inventoryId = i.id
       WHERE st.transactionDate >= ${startDate}
@@ -196,7 +196,7 @@ export async function GET(req: Request) {
         CONCAT(ih.totalRecords, ' records') as itemName,
         ih.successRecords as quantity,
         ih.status as reason
-      FROM ImportHistory ih
+      FROM importhistory ih
       JOIN User u ON ih.processedBy = u.id
       WHERE ih.createdAt >= ${startDate}
         AND ih.createdAt <= ${endDate}
@@ -269,7 +269,7 @@ export async function GET(req: Request) {
         transactionType,
         COUNT(*) as count,
         DATE_FORMAT(transactionDate, '%Y-%m-%d') as date
-      FROM StockTransaction 
+      FROM stocktransaction 
       WHERE transactionDate >= ${startDate} AND transactionDate <= ${endDate}
       GROUP BY transactionType, DATE_FORMAT(transactionDate, '%Y-%m-%d')
       ORDER BY date DESC, transactionType
@@ -283,7 +283,7 @@ export async function GET(req: Request) {
         SUM(totalRecords) as totalRecords,
         SUM(successRecords) as successRecords,
         DATE_FORMAT(createdAt, '%Y-%m-%d') as date
-      FROM ImportHistory 
+      FROM importhistory 
       WHERE createdAt >= ${startDate} AND createdAt <= ${endDate}
       GROUP BY importType, DATE_FORMAT(createdAt, '%Y-%m-%d')
       ORDER BY date DESC, importType
@@ -295,7 +295,7 @@ export async function GET(req: Request) {
         COUNT(DISTINCT username) as activeUsers,
         COUNT(*) as totalLogins,
         DATE_FORMAT(lastLogin, '%Y-%m-%d') as date
-      FROM User 
+      FROM user 
       WHERE lastLogin >= ${startDate} AND lastLogin <= ${endDate}
       GROUP BY DATE_FORMAT(lastLogin, '%Y-%m-%d')
       ORDER BY date DESC
