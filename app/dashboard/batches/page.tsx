@@ -115,10 +115,10 @@ function EditBatchForm({ batch, onSave, onCancel, updating, inventoryItems, ware
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Batch Number *
           </label>
           <input
@@ -127,12 +127,12 @@ function EditBatchForm({ batch, onSave, onCancel, updating, inventoryItems, ware
             required
             value={editFormData.batchNumber}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full h-9 px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Lot Number
           </label>
           <input
@@ -140,12 +140,12 @@ function EditBatchForm({ batch, onSave, onCancel, updating, inventoryItems, ware
             name="lotNumber"
             value={editFormData.lotNumber}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full h-9 px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Quantity Received *
           </label>
           <input
@@ -156,12 +156,12 @@ function EditBatchForm({ batch, onSave, onCancel, updating, inventoryItems, ware
             step="0.01"
             value={editFormData.quantityReceived}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full h-9 px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Quantity Remaining
           </label>
           <input
@@ -171,12 +171,12 @@ function EditBatchForm({ batch, onSave, onCancel, updating, inventoryItems, ware
             step="0.01"
             value={editFormData.quantityRemaining}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full h-9 px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Manufacture Date
           </label>
           <input
@@ -184,12 +184,12 @@ function EditBatchForm({ batch, onSave, onCancel, updating, inventoryItems, ware
             name="manufactureDate"
             value={editFormData.manufactureDate}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full h-9 px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Expiry Date *
           </label>
           <input
@@ -198,12 +198,12 @@ function EditBatchForm({ batch, onSave, onCancel, updating, inventoryItems, ware
             required
             value={editFormData.expiryDate}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full h-9 px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Cost Per Unit
           </label>
           <input
@@ -214,12 +214,12 @@ function EditBatchForm({ batch, onSave, onCancel, updating, inventoryItems, ware
             value={editFormData.costPerUnit}
             onChange={handleInputChange}
             placeholder="0.00"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full h-9 px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Supplier Information
           </label>
           <input
@@ -227,21 +227,21 @@ function EditBatchForm({ batch, onSave, onCancel, updating, inventoryItems, ware
             name="supplierInfo"
             value={editFormData.supplierInfo}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full h-9 px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           Notes
         </label>
         <textarea
           name="notes"
-          rows={3}
+          rows={2}
           value={editFormData.notes}
           onChange={handleInputChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
       </div>
 
@@ -259,7 +259,7 @@ function EditBatchForm({ batch, onSave, onCancel, updating, inventoryItems, ware
       </div>
 
       {/* Form Actions */}
-      <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+      <div className="flex justify-end space-x-3 pt-3 border-t border-gray-200 dark:border-gray-700">
         <Button
           type="button"
           variant="outline"
@@ -852,10 +852,10 @@ export default function BatchManagementPage() {
       {/* Create Batch Form Modal */}
       {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-xl font-bold">Create New Batch</h2>
+            <div className="px-6 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-800">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Create New Batch</h2>
               <button
                 type="button"
                 onClick={() => {
@@ -887,25 +887,26 @@ export default function BatchManagementPage() {
             
             {/* Modal Body - Scrollable */}
             <div className="flex-1 overflow-y-auto px-6 py-4">
-              <form onSubmit={handleCreateBatch} id="batch-form" className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={handleCreateBatch} id="batch-form" className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Batch Number*</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Batch Number*</label>
                     <Input
                       required
                       value={formData.batchNumber}
                       onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
                       placeholder="e.g., BATCH001"
+                      className="h-9"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Item Barcode*</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Item Barcode*</label>
                     <Input
                       required
                       value={formData.barcode}
                       onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
                       placeholder="Scan or enter barcode"
-                      className="w-full"
+                      className="w-full h-9"
                     />
                     
                     {/* Loading indicator */}
@@ -921,7 +922,7 @@ export default function BatchManagementPage() {
                     
                     {/* Selected item display */}
                     {selectedItem && !barcodeLoading && (
-                      <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                      <div className="mt-1.5 p-2 bg-green-50 border border-green-200 rounded-md">
                         <div className="flex items-center">
                           <span className="text-green-600 mr-2">✅</span>
                           <div>
@@ -934,7 +935,7 @@ export default function BatchManagementPage() {
                     
                     {/* No item found */}
                     {formData.barcode && !selectedItem && !barcodeLoading && (
-                      <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                      <div className="mt-1.5 p-2 bg-red-50 border border-red-200 rounded-md">
                         <div className="flex items-center">
                           <span className="text-red-600 mr-2">❌</span>
                           <p className="text-sm text-red-800">No item found with barcode: {formData.barcode}</p>
@@ -943,12 +944,12 @@ export default function BatchManagementPage() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Warehouse*</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Warehouse*</label>
                     <select
                       required
                       value={formData.warehouseId}
                       onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value })}
-                      className="w-full p-2 border rounded"
+                      className="w-full h-9 px-3 py-1.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Select Warehouse</option>
                       {Array.isArray(warehouses) && warehouses.map((warehouse, index) => {
@@ -963,7 +964,7 @@ export default function BatchManagementPage() {
                     
                     {/* Warehouse Availability Alert */}
                     {warehouseAlert.show && (
-                      <div className={`mt-2 p-3 rounded-md text-sm ${
+                      <div className={`mt-1.5 p-2 rounded-md text-sm ${
                         warehouseAlert.type === 'success' 
                           ? 'bg-green-50 text-green-800 border border-green-200' 
                           : warehouseAlert.type === 'warning'
@@ -983,62 +984,68 @@ export default function BatchManagementPage() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Quantity Received*</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Quantity Received*</label>
                     <Input
                       required
                       type="number"
                       min="1"
                       value={formData.quantityReceived}
                       onChange={(e) => setFormData({ ...formData, quantityReceived: e.target.value })}
+                      className="h-9"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Manufacture Date</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Manufacture Date</label>
                     <Input
                       type="date"
                       value={formData.manufactureDate}
                       onChange={(e) => setFormData({ ...formData, manufactureDate: e.target.value })}
+                      className="h-9"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Expiry Date*</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Expiry Date*</label>
                     <Input
                       required
                       type="date"
                       value={formData.expiryDate}
                       onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                      className="h-9"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Expiry Alert Days</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Expiry Alert Days</label>
                     <Input
                       type="number"
                       min="1"
                       max="365"
                       value={formData.expireDateAlert}
                       onChange={(e) => setFormData({ ...formData, expireDateAlert: e.target.value })}
-                      placeholder="e.g., 30"
+                      placeholder="30"
+                      className="h-9"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Days before expiry to trigger alerts</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Days before expiry to trigger alerts</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Supplier Info</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Supplier Info</label>
                     <Input
                       value={formData.supplierInfo}
                       onChange={(e) => setFormData({ ...formData, supplierInfo: e.target.value })}
                       placeholder="Supplier name or info"
+                      className="h-9"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Lot Number</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Lot Number</label>
                     <Input
                       value={formData.lotNumber}
                       onChange={(e) => setFormData({ ...formData, lotNumber: e.target.value })}
                       placeholder="Lot/batch identifier"
+                      className="h-9"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Cost Per Unit</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Cost Per Unit</label>
                     <Input
                       type="number"
                       step="0.01"
@@ -1046,16 +1053,17 @@ export default function BatchManagementPage() {
                       value={formData.costPerUnit}
                       onChange={(e) => setFormData({ ...formData, costPerUnit: e.target.value })}
                       placeholder="0.00"
+                      className="h-9"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Notes</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Notes</label>
                   <textarea
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full p-2 border rounded"
-                    rows={3}
+                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={2}
                     placeholder="Additional notes or comments"
                   />
                 </div>
@@ -1063,7 +1071,7 @@ export default function BatchManagementPage() {
             </div>
             
             {/* Modal Footer - Fixed at bottom */}
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
+            <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-end space-x-3">
               <Button
                 type="button"
                 variant="outline"
@@ -1616,7 +1624,7 @@ export default function BatchManagementPage() {
           ></div>
           
           <div 
-            className="relative bg-white rounded-lg px-6 pt-6 pb-6 shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            className="relative bg-white dark:bg-gray-800 rounded-xl px-6 pt-5 pb-5 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             onClick={(e) => {
               e.stopPropagation();
               console.log('Modal content clicked');
@@ -1630,11 +1638,11 @@ export default function BatchManagementPage() {
             </div>
 
             {/* Modal Content */}
-            <div className="text-center mb-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">
                 Edit Batch: {editingBatch.batchNumber}
               </h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Update batch details below. Changes will be saved immediately.
               </p>
             </div>
