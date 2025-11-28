@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Settings, Palette, Bell, FileText, Upload, Image, Trash2 } from "lucide-react";
+import { Settings, Palette, Bell, FileText, Upload, Image, Trash2, Mail } from "lucide-react";
 import { AccessControl } from "@/components/access-control";
 import StockResetComponent from "@/components/admin/stock-reset";
 
@@ -15,6 +15,7 @@ function SettingsContent() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
   const [settings, setSettings] = useState<SettingsMap>({});
+  const [emailStatus, setEmailStatus] = useState<{preview?: any; sending?: boolean; result?: any}>({});
 
   useEffect(() => {
     let mounted = true;
@@ -97,6 +98,35 @@ function SettingsContent() {
       setTimeout(() => setSaved(null), 2000);
     }
   };
+
+  const testEmailNotifications = async () => {
+    setEmailStatus({ sending: true });
+    try {
+      const res = await fetch("/api/alerts/notify", { method: "POST" });
+      const result = await res.json();
+      setEmailStatus({ result, sending: false });
+      setTimeout(() => setEmailStatus({}), 5000);
+    } catch (error) {
+      setEmailStatus({ result: { error: String(error) }, sending: false });
+      setTimeout(() => setEmailStatus({}), 5000);
+    }
+  };
+
+  const previewEmailNotifications = async () => {
+    try {
+      const res = await fetch("/api/alerts/notify");
+      const preview = await res.json();
+      setEmailStatus({ preview });
+    } catch (error) {
+      console.error("Failed to preview:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (!loading) {
+      previewEmailNotifications();
+    }
+  }, [loading]);
 
   // Populate available system voices for selection
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -371,8 +401,115 @@ function SettingsContent() {
                   write("alertEmailRecipients", uniq);
                 }}
               />
-              <span className="text-xs text-gray-500 dark:text-gray-400">These addresses will receive stock alerts (feature can be wired to email later). Separate multiple emails with commas or new lines.</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">These addresses will receive stock alerts via email. Separate multiple emails with commas or new lines.</span>
             </label>
+          </section>
+
+          {/* Email Notifications Section */}
+          <section className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6 space-y-4 shadow-lg shadow-gray-500/5">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-full flex items-center justify-center">
+                <Mail className="w-5 h-5 text-white" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Email Notifications</h2>
+            </div>
+
+            {emailStatus.preview && (
+              <div className="p-4 bg-gray-50/50 dark:bg-gray-900/50 rounded-xl border border-gray-200/50 dark:border-gray-700/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Recipients</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{emailStatus.preview.recipients?.length || 0}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Active Alerts</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{emailStatus.preview.alertCounts?.total || 0}</span>
+                </div>
+                <div className="text-xs space-y-1 text-gray-600 dark:text-gray-400">
+                  <div>• Low Stock: {emailStatus.preview.alertCounts?.lowStock || 0}</div>
+                  <div>• Expiring Soon: {emailStatus.preview.alertCounts?.expiring || 0}</div>
+                  <div>• Negative Stock: {emailStatus.preview.alertCounts?.negativeStock || 0}</div>
+                </div>
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="font-medium">Email Config:</span>
+                    <span className={emailStatus.preview.emailConfigured ? "text-green-600" : "text-red-600"}>
+                      {emailStatus.preview.emailConfigured ? "✓ Recipients Set" : "✗ No Recipients"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs mt-1">
+                    <span className="font-medium">SMTP Config:</span>
+                    <span className={emailStatus.preview.smtpConfigured ? "text-green-600" : "text-red-600"}>
+                      {emailStatus.preview.smtpConfigured ? "✓ Configured" : "✗ Not Configured"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Button 
+                onClick={testEmailNotifications}
+                disabled={emailStatus.sending || !settings.alertEmailRecipients || (settings.alertEmailRecipients as string[]).length === 0}
+                className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white"
+              >
+                {emailStatus.sending ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Sending Notifications...
+                  </div>
+                ) : (
+                  "Send Alert Notifications Now"
+                )}
+              </Button>
+
+              <Button 
+                onClick={previewEmailNotifications}
+                variant="outline"
+                className="w-full"
+                size="sm"
+              >
+                Refresh Preview
+              </Button>
+            </div>
+
+            {emailStatus.result && (
+              <div className={`p-4 rounded-xl border ${
+                emailStatus.result.error 
+                  ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800" 
+                  : "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
+              }`}>
+                <h4 className={`font-semibold ${
+                  emailStatus.result.error ? "text-red-800 dark:text-red-400" : "text-green-800 dark:text-green-400"
+                }`}>
+                  {emailStatus.result.error ? "❌ Error" : "✅ Success"}
+                </h4>
+                <div className="mt-2 text-sm space-y-1">
+                  {emailStatus.result.message && <div>{emailStatus.result.message}</div>}
+                  {emailStatus.result.totalAlerts !== undefined && (
+                    <>
+                      <div>Total Alerts: <strong>{emailStatus.result.totalAlerts}</strong></div>
+                      <div>Emails Sent: <strong>{emailStatus.result.sent}</strong></div>
+                      {emailStatus.result.errors > 0 && <div className="text-red-600">Errors: <strong>{emailStatus.result.errors}</strong></div>}
+                    </>
+                  )}
+                  {emailStatus.result.error && <div className="text-red-600 dark:text-red-400">{emailStatus.result.error}</div>}
+                </div>
+              </div>
+            )}
+
+            <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1 p-3 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg">
+              <p className="font-medium text-gray-700 dark:text-gray-300">📧 Setup Instructions:</p>
+              <p>1. Add recipient emails in "Stock alert notification emails" above</p>
+              <p>2. Configure SMTP in your .env file:</p>
+              <code className="block text-xs bg-gray-900 dark:bg-gray-800 text-gray-100 p-2 rounded mt-1">
+                SMTP_HOST=smtp.gmail.com<br/>
+                SMTP_PORT=587<br/>
+                SMTP_USER=your-email@gmail.com<br/>
+                SMTP_PASS=your-app-password<br/>
+                SMTP_FROM=alerts@yourdomain.com
+              </code>
+              <p className="mt-2">3. Save settings and test using the button above</p>
+            </div>
           </section>
         </div>
       )}

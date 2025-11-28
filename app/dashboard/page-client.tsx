@@ -116,50 +116,50 @@ export default function DashboardClient() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow border">
+        <div className="stat-card bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-blue-100 dark:border-blue-900/30 hover:border-blue-300 dark:hover:border-blue-700/50 transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Items</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalItems.toLocaleString()}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Total Items</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{stats.totalItems.toLocaleString()}</p>
             </div>
-            <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Package className="h-6 w-6 text-blue-600" />
+            <div className="h-14 w-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform duration-300">
+              <Package className="h-7 w-7 text-white" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow border">
+        <div className="stat-card bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-red-100 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-700/50 transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Low Stock</p>
-              <p className="text-2xl font-bold text-red-600">{stats.lowStock}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Low Stock</p>
+              <p className="text-3xl font-bold text-red-600 dark:text-red-500">{stats.lowStock}</p>
             </div>
-            <div className="h-12 w-12 bg-red-100 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="h-6 w-6 text-red-600" />
+            <div className="h-14 w-14 bg-gradient-to-br from-red-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/30 group-hover:scale-110 transition-transform duration-300">
+              <AlertTriangle className="h-7 w-7 text-white" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow border">
+        <div className="stat-card bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-yellow-100 dark:border-yellow-900/30 hover:border-yellow-300 dark:hover:border-yellow-700/50 transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Pending Items</p>
-              <p className="text-2xl font-bold text-yellow-600">{stats.pendingItems}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Expiring Soon</p>
+              <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-500">{stats.pendingItems}</p>
             </div>
-            <div className="h-12 w-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <Clock className="h-6 w-6 text-yellow-600" />
+            <div className="h-14 w-14 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-yellow-500/30 group-hover:scale-110 transition-transform duration-300">
+              <Clock className="h-7 w-7 text-white" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow border">
+        <div className="stat-card bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-green-100 dark:border-green-900/30 hover:border-green-300 dark:hover:border-green-700/50 transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Warehouses</p>
-              <p className="text-2xl font-bold text-green-600">{stats.totalWarehouses}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Warehouses</p>
+              <p className="text-3xl font-bold text-green-600 dark:text-green-500">{stats.totalWarehouses}</p>
             </div>
-            <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <Warehouse className="h-6 w-6 text-green-600" />
+            <div className="h-14 w-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-500/30 group-hover:scale-110 transition-transform duration-300">
+              <Warehouse className="h-7 w-7 text-white" />
             </div>
           </div>
         </div>
@@ -168,8 +168,8 @@ export default function DashboardClient() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Stock Health Overview */}
-        <div className="bg-white p-6 rounded-lg shadow border">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Stock Health Overview</h3>
+        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Stock Health Overview</h3>
           <div className="h-64 flex items-center justify-center">
             <div className="text-center">
               <div className="grid grid-cols-3 gap-4">
@@ -197,8 +197,8 @@ export default function DashboardClient() {
         </div>
 
         {/* Inventory by Category */}
-        <div className="bg-white p-6 rounded-lg shadow border">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Inventory by Category</h3>
+        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Inventory by Category</h3>
           <div className="h-64">
             <div className="space-y-3">
               {categoryData.slice(0, 6).map((category, index) => (
@@ -219,8 +219,8 @@ export default function DashboardClient() {
       </div>
 
       {/* Transaction Trends */}
-      <div className="bg-white p-6 rounded-lg shadow border">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Transaction Trends</h3>
+      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Transaction Trends</h3>
         <div className="h-64 flex items-center justify-center">
           <div className="text-center text-gray-500">
             <Package className="h-12 w-12 mx-auto mb-2" />
@@ -230,8 +230,8 @@ export default function DashboardClient() {
       </div>
 
       {/* Warehouse Distribution */}
-      <div className="bg-white p-6 rounded-lg shadow border">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Warehouse Distribution</h3>
+      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Warehouse Distribution</h3>
         <div className="h-64">
           <div className="space-y-3">
             {warehouseDistribution.slice(0, 8).map((warehouse) => (
@@ -260,8 +260,8 @@ export default function DashboardClient() {
       {/* Bottom Row - Recent Activity and Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
-        <div className="bg-white p-6 rounded-lg shadow border">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Recent Activity</h3>
           <div className="space-y-3">
             {recentActivity.slice(0, 10).map((activity) => (
               <div key={activity.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
@@ -293,8 +293,8 @@ export default function DashboardClient() {
         </div>
 
         {/* Active Alerts */}
-        <div className="bg-white p-6 rounded-lg shadow border">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Active Alerts</h3>
+        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Active Alerts</h3>
           <div className="space-y-3">
             {alerts.slice(0, 10).map((alert) => (
               <div key={alert.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
